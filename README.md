@@ -16,15 +16,14 @@ and as seen on the default layer on osm.org:
 ![nik4 - osm.org - nik2img](img/demo-zoom-levels.png)
 
 Also it can use real-world units, that is, millimeters (and prefers to). Specify dimensions
-for printing, choose bounding box and ppi scale — and the result won't disappoint.
-
-![A4 options](img/paper-options.png)
+for printing, choose bounding box and ppi scale — and the result won't disappoint. Options
+are intuitive and plenty, and you will be amazed how much tasks became simpler with Nik4.
 
 ## How to use it
 
 Again, run `./nik4.py -h` to see the list of all available options. Here are some examples.
 
-### Watching a mapping party area
+### Watch a mapping party area
 
 First, if you haven't already, install PostgreSQL+PostGIS and Mapnik, and use osm2pgsql
 to populate the database with a planet extract. For instructions see
@@ -82,13 +81,55 @@ trouble opening an image surpassing 200 megapixels.
 
 ### Get an image for printing
 
-Let's say you need a 1:50000 image of a city center for printing on a A4 sheet with margins.
+![A4 options](img/paper-options.png)
 
-*todo*
+Let's say you need a 1:5000 image of a city center for printing on a A4 sheet with margins.
+
+    ./nik4.py -s 5000 --ppi 300 -a 4 -c 24.1094 56.9488 --margin 10 ~/osm/krym/carto/osm.xml 4print.png
+
+What you get is a raster image, which when printed on an A4 with 300 dpi resolution, would have 10 mm margins
+and scale of exactly 50 m in a cm. See the picture above for explanation of margins and other options.
+By default paper is in landscape, horizontal orientation. To turn it portrait, use negative values
+for `-a` option. Or enter numbers by hand: `-d 150 100` will export a 15×10 postcard map.
 
 ### Print a route
 
-*todo*
+On the image above there is a route. Nik4 cannot parse GPX files or draw anything on top of exported
+images, but it can manage layers in Mapnik style file. And Mapnik (via OGR plugin) can draw
+[a lot of things](http://www.gdal.org/ogr/ogr_formats.html), including GPX, GeoJSON, CSV, KML.
+Just add your route to the style like this:
+
+```xml
+<Style name="route" filter-mode="first">
+  <Rule>
+    <LineSymbolizer stroke-width="5" stroke="#012d64" stroke-linejoin="round" stroke-linecap="round" />
+  </Rule>
+</Style>
+<Layer name="route" status="off" srs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs">
+    <StyleName>route</StyleName>
+    <Datasource>
+       <Parameter name="type">ogr></Parameter>
+       <Parameter name="file"><![CDATA[/home/user/route.gpx]]></Parameter>
+       <Parameter name="layer">tracks></Parameter>
+       <Parameter name="all_layers">route_points,routes,track_points,waypoints></Parameter>
+    </Datasource>
+  </Layer>
+```
+
+Note that you can add it in any place: for example, between road and label layers, so the route does not
+obscure any text. Also note `status="off"`: this layer won't be drawn by default. So if you want
+to export a clean map for the extent of your route (or any other) layer, use those options:
+
+    ./nik4.py --fit route --size-px 400 700 osm.xml route_area.png
+
+To enable drawing of the layer, use `--add-layers` option:
+
+    ./nik4.py --fit route --add-layers route,stops --ppi 150 -a -6 osm.xml route.png
+
+You can list many layers, separating them with commas. And you can hide some layers:
+`--skip-layers contours,shields`. Obviously you can fit several layers at once, as well
+as specify a bounding box to include on a map. All layer names are case-sensitive, so if
+something does not appear, check your style file for exact layer names.
 
 ### Generate a vector drawing from a map
 
