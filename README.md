@@ -53,13 +53,32 @@ road lines, render more villages, highlight useful POI and cycling routes.
 
     ./nik4.py -b 25 61.6 30.6 63.3 -z 13 custom.xml kuopio.png --ozi kuopio.map
 
-This will render 12345x6789 (*todo*) image with a georeferencing file ready to open in OziExplorer.
+This will render 16311×10709 image with a georeferencing file ready to open in OziExplorer.
 For a `.wld` file, which can be used in desktop GIS applications or for creating a GeoTIFF file,
 use `--wld` option. You can convert png+wld to geotiff with GDAL:
 
     gdal_translate -of GTiff -a_srs epsg:4326 image.png image.tif
 
-*todo: test, maybe 4326 is a lie*
+### Make a BIG raster image
+
+You would likely encounter out of memory error while trying to generate 16311×10709 image from the last
+chapter. Despair not:
+
+    ./nik4.py -b 25 61.6 30.6 63.3 -z 13 custom.xml kuopio.png --ozi kuopio.map --tiles 4
+
+Voilà — now Mapnik has to generate 16 images of manageable size 4078×2678. After that Nik4 will call
+`montage` from the Imagemagick package to stitch all tiles together.
+
+What if `montage` cannot fit images into memory? There is a way, but you would need quite a lot of disk
+space, several gigabytes:
+
+    for i in *_kuopio.png; do convert $i `basename $i .png`.mpc; done
+    montage -geometry +0+0 -tile 4x4 *_kuopio.mpc kuopio.png
+    rm *_kuopio.{png,mpc,cache}
+
+These lines will convert all images to Imagemagick's internal MPC format, from which `montage` reads directly.
+You would need more space for a similar MPC cache of the output file. Note that most software will have
+trouble opening an image surpassing 200 Mpx.
 
 ### Get an image for printing
 
