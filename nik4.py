@@ -13,6 +13,9 @@ try:
 except ImportError:
 	HAS_CAIRO = False
 
+TILE_BUFFER = 128
+IM_MONTAGE = 'montage'
+
 p3857 = mapnik.Projection('+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over')
 p4326 = mapnik.Projection('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
 transform = mapnik.ProjTransform(p4326, p3857)
@@ -135,6 +138,7 @@ if __name__ == "__main__":
 	parser.add_argument('--layers', help='Map layers to render, comma-separated')
 	parser.add_argument('--add-layers', help='Map layers to include, comma-separated')
 	parser.add_argument('--skip-layers', help='Map layers to hide, comma-separated')
+	parser.add_argument('--tiles', type=int, choices=range(1, 13), default=1, help='Write N×N tiles, then join using imagemagick')
 	parser.add_argument('-v', '--debug', action='store_true', default=False, help='Display calculated values')
 	parser.add_argument('style', help='Style file for mapnik')
 	parser.add_argument('output', help='Resulting image file')
@@ -258,10 +262,39 @@ if __name__ == "__main__":
 		else:
 			mapnik.render_to_file(m, options.output, fmt)
 	else:
-		im = mapnik.Image(size[0], size[1])
-		mapnik.render(m, im, scale_factor)
-		im.save(options.output, fmt)
-	
+		if options.tiles == 1:
+			im = mapnik.Image(size[0], size[1])
+			mapnik.render(m, im, scale_factor)
+			im.save(options.output, fmt)
+		else:
+			bbox = m.envelope()
+			width = max(32, int(math.ceil(1.0 * size[0] / options.tiles)))
+			height = max(32, int(math.ceil(1.0 * size[1] / options.tiles)))
+			m.resize(width, height)
+			m.buffer_size = TILE_BUFFER
+			tile_cnt = [int(math.ceil(1.0 * size[0] / width)), int(math.ceil(1.0 * size[1] / height))]
+			if options.debug:
+				print 'tile_count={},{}'.format(tile_cnt[0], tile_cnt[1])
+				print 'tile_size={},{}'.format(width, height)
+			tmp_tile = '{:02d}_{:02d}_{}'
+			tile_files = []
+			for row in range(0, tile_cnt[1]):
+				for column in range(0, tile_cnt[0]):
+					if options.debug:
+						print 'tile={},{}'.format(row, column)
+					m.zoom_to_box(mapnik.Box2d(bbox.minx + width * scale * column, bbox.maxy - height * scale * row, bbox.minx + width * scale * (column + 1), bbox.maxy - height * scale * (row + 1)))
+					im = mapnik.Image(width if column < tile_cnt[0] - 1 else size[0] - width * (tile_cnt[0] - 1), height if row < tile_cnt[1] - 1 else size[1] - height * (tile_cnt[1] - 1))
+					mapnik.render(m, im, scale_factor)
+					tile_name = tmp_tile.format(row, column, options.output)
+					im.save(tile_name, fmt)
+					tile_files.append(tile_name)
+			# join tiles and remove them if joining succeeded
+			import subprocess
+			result = subprocess.call([IM_MONTAGE, '-geometry', '+0+0', '-tile', '{}x{}'.format(tile_cnt[0], tile_cnt[1])] + tile_files + [options.output])
+			if result == 0:
+				for tile in tile_files:
+					os.remove(tile)
+
 	# generate metadata
 	if options.ozi:
 		options.ozi.write(prepare_ozi(m, options.output))
