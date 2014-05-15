@@ -10,7 +10,7 @@ it won't take a pixel less or more. It won't shrink a bounding box or distort li
 specifying so called "scale factor". When you need a 300 dpi image, you tell it `--ppi 300`
 and can be sure you will get what you intended.
 
-For example, this is a sample rendering of an area in Talling on zoom 17, by Nik4, Nik2img
+For example, this is a sample rendering of an area in Tallin on zoom 17, by Nik4, Nik2img
 and as seen on the default layer on osm.org:
 
 ![nik4 - osm.org - nik2img](img/demo-zoom-levels.png)
@@ -26,7 +26,7 @@ Again, run `./nik4.py -h` to see the list of all available options. Here are som
 
 ### Watching a mapping party area
 
-First, you you haven't already, install PostgreSQL+PostGIS and Mapnik, and use osm2pgsql
+First, if you haven't already, install PostgreSQL+PostGIS and Mapnik, and use osm2pgsql
 to populate the database with a planet extract. For instructions see
 [here](http://switch2osm.org/loading-osm-data/) or [here](http://wiki.openstreetmap.org/wiki/User:Zverik/Tile_Server_on_Fedora_20).
 Get bounds by visiting [osm.org](http://openstreetmap.org): click "Export" and "Choose another region". Then:
