@@ -24,17 +24,49 @@ for printing, choose bounding box and ppi scale — and the result won't disappo
 
 Again, run `./nik4.py -h` to see the list of all available options. Here are some examples.
 
-*todo*
-
 ### Watching a mapping party area
 
-### Export an area around Apoint
+First, you you haven't already, install PostgreSQL+PostGIS and Mapnik, and use osm2pgsql
+to populate the database with a planet extract. For instructions see
+[here](http://switch2osm.org/loading-osm-data/) or [here](http://wiki.openstreetmap.org/wiki/User:Zverik/Tile_Server_on_Fedora_20).
+Get bounds by visiting [osm.org](http://openstreetmap.org): click "Export" and "Choose another region". Then:
+
+    ./nik4.py -b -0.009 51.47 0.013 51.484 -z 17 openstreetmap-carto/osm.xml party-before.png
+
+Here `osm.xml` is the compiled Mapnik style.
+Then you can [update](http://wiki.openstreetmap.org/wiki/Minutely_Mapnik) you database and generate
+snapshots of an area as it is being mapped. Alternatively, you can specify an area with its center
+and desired image size in pixels:
+
+    ./nik4.py -c 0 51.477 --size-px 800 600 -z 17 openstreetmap-carto/osm.xml party-before.png
 
 ### Get an image for printing
 
+Let's say you need a 1:50000 image of a city center for printing on a A4 sheet with margins.
+
+### Print a route
+
 ### Generate a vector drawing from a map
 
+It's as easy as adding an `.svg` extension to the output file name.
+
+    ./nik4.py --fit route -a -5 --factor 4 osm.xml map.svg
+
+Why did I use `--factor` (it's the same as using `--ppi 362.8`, which is 90.7 * 4)? Shouldn't
+vector images be independent of the resolution? Well, the problem is in label kerning:
+
 ![SVG labels quality](img/svg-factor.png)
+
+Left image was exported with `--factor 1`. You can see in "ali", "sis", "Uus" that distance between
+letters is varying unpredictably, not like the font instructs. That's because Mapnik rounds letter widths
+to nearest integers, that is, to pixels. By increasing the resolution, you make that granularity finer,
+so rounding errors are much less prominent. Labels would become slightly longer, that's why they are
+different in the second image.
+
+You can export a map to PDF and be done with it, but often you'd want to do some postprocessing:
+move labels away from roads, highlight features, draw additional labels and arrows. For that
+I recommend processing the SVG file with [mapnik-group-text](https://github.com/Zverik/mapnik-group-text),
+which would allow for easier label movement.
 
 ## See also
 
@@ -45,3 +77,7 @@ Again, run `./nik4.py -h` to see the list of all available options. Here are som
 * [nik2img](http://code.google.com/p/mapnik-utils/wiki/Nik2Img)
 
 For generating tiles, see [polytiles.py](https://github.com/Zverik/polytiles).
+
+## Author and license
+
+The script was written by Ilya Zverev and published under WTFPL.
