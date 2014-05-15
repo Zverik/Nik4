@@ -127,7 +127,7 @@ To enable drawing of the layer, use `--add-layers` option:
     ./nik4.py --fit route --add-layers route,stops --ppi 150 -a -6 osm.xml route.png
 
 You can list many layers, separating them with commas. And you can hide some layers:
-`--skip-layers contours,shields`. Obviously you can fit several layers at once, as well
+`--hide-layers contours,shields`. Obviously you can fit several layers at once, as well
 as specify a bounding box to include on a map. All layer names are case-sensitive, so if
 something does not appear, check your style file for exact layer names.
 
