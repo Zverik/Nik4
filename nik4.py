@@ -49,9 +49,9 @@ def prepare_ozi(m, name):
 		minutes = (abs(value) - degrees) * 60
 		return '{:4d},{:3.5F},{}'.format(int(round(degrees)), minutes, ('W' if is_lon else 'S') if value < 0 else ('E' if is_lon else 'N'))
 	bbox = transform.backward(m.envelope())
-	return '''
-OziExplorer Map Data File Version 2.2
-BigMap
+	points = "\n".join(['Point{:02d},xy,     ,     ,in, deg,    ,        ,N,    ,        ,E, grid,   ,           ,           ,N'.format(n) for n in range(3,31)])
+	return '''OziExplorer Map Data File Version 2.2
+Nik4
 {}
 1 ,Map Code,
 WGS 84,WGS 84,   0.0000,   0.0000,WGS 84
@@ -61,34 +61,7 @@ Magnetic Variation,,,E
 Map Projection,Mercator,PolyCal,No,AutoCalOnly,No,BSBUseWPX,No
 Point01,xy,    0,    0,in, deg,{},{}, grid,   ,           ,           ,N
 Point02,xy, {:4d}, {:4d},in, deg,{},{}, grid,   ,           ,           ,N
-Point03,xy,     ,     ,in, deg,    ,        ,N,    ,        ,E, grid,   ,           ,           ,N
-Point04,xy,     ,     ,in, deg,    ,        ,N,    ,        ,E, grid,   ,           ,           ,N
-Point05,xy,     ,     ,in, deg,    ,        ,N,    ,        ,E, grid,   ,           ,           ,N
-Point06,xy,     ,     ,in, deg,    ,        ,N,    ,        ,E, grid,   ,           ,           ,N
-Point07,xy,     ,     ,in, deg,    ,        ,N,    ,        ,E, grid,   ,           ,           ,N
-Point08,xy,     ,     ,in, deg,    ,        ,N,    ,        ,E, grid,   ,           ,           ,N
-Point09,xy,     ,     ,in, deg,    ,        ,N,    ,        ,E, grid,   ,           ,           ,N
-Point10,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point11,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point12,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point13,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point14,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point15,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point16,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point17,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point18,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point19,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point20,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point21,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point22,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point23,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point24,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point25,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point26,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point27,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point28,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point29,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
-Point30,xy,     ,     ,in, deg,    ,        ,N,    ,        ,W, grid,   ,           ,           ,N
+{}
 Projection Setup,,,,,,,,,,
 Map Feature = MF ; Map Comment = MC     These follow if they exist
 Track File = TF      These follow if they exist
@@ -96,7 +69,7 @@ Moving Map Parameters = MM?    These follow if they exist
 MM0,Yes
 MMPNUM,4
 MMPXY,1,0,0
-'''.format(name, deg(bbox.maxy, False), deg(bbox.minx, True), m.width - 1, m.height - 1, deg(bbox.miny, False), deg(bbox.maxx, True)) \
+'''.format(name, deg(bbox.maxy, False), deg(bbox.minx, True), m.width - 1, m.height - 1, deg(bbox.miny, False), deg(bbox.maxx, True), points) \
 	+ "MMPXY,2,{},0\n".format(m.width) \
 	+ "MMPXY,3,{},{}\n".format(m.width, m.height) \
 	+ "MMPXY,4,0,{}\n".format(m.height) \
