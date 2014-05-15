@@ -20,14 +20,17 @@ p3857 = mapnik.Projection('+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0
 p4326 = mapnik.Projection('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
 transform = mapnik.ProjTransform(p4326, p3857)
 
-def layer_bbox(m, name):
-	"""Calculate extent of a given layer"""
-	layers = [l for l in m.layers if l.name.lower() == name.lower()]
-	if not layers:
-		return None
-	# it may as well be a GPX layer in WGS84
-	p = mapnik.Projection(layers[0].srs)
-	return layers[0].envelope().inverse(p).forward(p3857)
+def layer_bbox(m, names, bbox=None):
+	"""Calculate extent of given layers and bbox"""
+	for layer in (l for l in m.layers if l.name in names):
+		# it may as well be a GPX layer in WGS84
+		p = mapnik.Projection(layer.srs)
+		lbbox = layer.envelope().inverse(p).forward(p3857)
+		if bbox:
+			bbox.expand_to_include(lbbox)
+		else:
+			bbox = lbbox
+	return bbox
 
 def filter_layers(m, lst):
 	"""Leave only layers in list active, disable others"""
@@ -102,15 +105,16 @@ if __name__ == "__main__":
 	parser.add_argument('-x', '--size-px', nargs=2, metavar=('W', 'H'), type=int, help='Target dimensions in pixels')
 	parser.add_argument('-m', '--margin', type=int, help='Amount in mm to reduce paper size')
 	parser.add_argument('-c', '--center', nargs=2, metavar=('X', 'Y'), type=float, help='Center of an image')
-	parser.add_argument('--fit', help='Fit layer in the map')
-	parser.add_argument('--padding', type=int, help='Margin for file in --fit (default=5), mm', default=5)
+
+	parser.add_argument('--fit', help='Fit layers in the map, comma-separated')
+	parser.add_argument('--padding', type=int, help='Margin for layers in --fit (default=5), mm', default=5)
+	parser.add_argument('--layers', help='Map layers to render, comma-separated')
+	parser.add_argument('--add-layers', help='Map layers to include, comma-separated')
+	parser.add_argument('--hide-layers', help='Map layers to hide, comma-separated')
 
 	parser.add_argument('-f', '--format', dest='fmt', help='Target file format (by default looks at extension)')
 	parser.add_argument('--ozi', type=argparse.FileType('w'), help='Generate ozi map file')
 	parser.add_argument('--wld', type=argparse.FileType('w'), help='Generate world file')
-	parser.add_argument('--layers', help='Map layers to render, comma-separated')
-	parser.add_argument('--add-layers', help='Map layers to include, comma-separated')
-	parser.add_argument('--skip-layers', help='Map layers to hide, comma-separated')
 	parser.add_argument('-t', '--tiles', type=int, choices=range(1, 13), default=1, help='Write N×N tiles, then join using imagemagick')
 	parser.add_argument('-v', '--debug', action='store_true', default=False, help='Display calculated values')
 	parser.add_argument('style', help='Style file for mapnik')
@@ -148,7 +152,7 @@ if __name__ == "__main__":
 		ppmm = options.ppi / 25.4
 		scale_factor = options.ppi / 90.7
 	else:
-		scale_factor = options.factor if options.factor else 1
+		scale_factor = options.factor
 		ppmm = 90.7 / 25.4 * scale_factor
 	
 	# svg / pdf can be scaled only in cairo mode
@@ -188,32 +192,33 @@ if __name__ == "__main__":
 	mapnik.load_map(m, options.style)
 	m.srs = p3857.params()
 
+	# get bbox from layer extents
 	if options.fit:
-		lbbox = layer_bbox(m, options.fit)
-		if lbbox:
-			# if --fix and --bbox are specified, extend bbox to cover both
-			if bbox:
-				bbox.expand_to_include(lbbox)
+		bbox = layer_bbox(m, options.fit.split(','), bbox)
+		# expand bbox with padding in mm
+		if bbox and options.padding and (scale or size):
+			if scale:
+				tscale = scale
 			else:
-				bbox = lbbox
-			# expand bbox with padding in mm
-			if options.padding and (scale or (bbox and size)):
-				if scale:
-					tscale = scale
-				else:
-					tscale = min((bbox.maxx - bbox.minx) / size[0], (bbox.maxy - bbox.miny) / size[1])
-				lbbox.pad(options.padding * ppmm * tscale)
-				bbox.expand_to_include(lbbox)
+				tscale = min((bbox.maxx - bbox.minx) / size[0], (bbox.maxy - bbox.miny) / size[1])
+			bbox.pad(options.padding * ppmm * tscale)
+
+	# bbox should be specified by this point
+	if not bbox:
+		raise Exception('Bounding box was not specified in any way')
 
 	# calculate pixel size from bbox and scale
-	if not size and bbox and scale:
-		size = [int(round(abs(bbox.maxx - bbox.minx) / scale)), int(round(abs(bbox.maxy - bbox.miny) / scale))]
+	if not size:
+		if scale:
+			size = [int(round(abs(bbox.maxx - bbox.minx) / scale)), int(round(abs(bbox.maxy - bbox.miny) / scale))]
+		else:
+			raise Exception('Image dimensions or scale were not specified in any way')
 
 	# add / remove some layers
 	if options.layers:
 		filter_layers(m, options.layers.split(','))
-	if options.add_layers or options.skip_layers:
-		select_layers(m, options.add_layers.split(',') if options.add_layers else [], options.skip_layers.split(',') if options.skip_layers else [])
+	if options.add_layers or options.hide_layers:
+		select_layers(m, options.add_layers.split(',') if options.add_layers else [], options.hide_layers.split(',') if options.hide_layers else [])
 
 	if options.debug:
 		print 'scale={}'.format(scale)
@@ -224,9 +229,10 @@ if __name__ == "__main__":
 		print 'layers=' + ','.join([l.name for l in m.layers if l.active])
 
 	# export image
+	m.aspect_fix_mode = mapnik.aspect_fix_mode.GROW_BBOX;
 	m.resize(size[0], size[1])
 	m.zoom_to_box(bbox)
-	m.aspect_fix_mode = mapnik.aspect_fix_mode.GROW_BBOX;
+
 	if need_cairo:
 		if HAS_CAIRO:
 			surface = cairo.SVGSurface(options.output, size[0], size[1]) if fmt == 'svg' else cairo.PDFSurface(options.output, size[0], size[1])
@@ -240,6 +246,7 @@ if __name__ == "__main__":
 			mapnik.render(m, im, scale_factor)
 			im.save(options.output, fmt)
 		else:
+			scale = m.scale()
 			bbox = m.envelope()
 			width = max(32, int(math.ceil(1.0 * size[0] / options.tiles)))
 			height = max(32, int(math.ceil(1.0 * size[1] / options.tiles)))
