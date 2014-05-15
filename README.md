@@ -55,8 +55,11 @@ road lines, render more villages, highlight useful POI and cycling routes.
 
 This will render 12345x6789 (*todo*) image with a georeferencing file ready to open in OziExplorer.
 For a `.wld` file, which can be used in desktop GIS applications or for creating a GeoTIFF file,
-use `--wld` option.
+use `--wld` option. You can convert png+wld to geotiff with GDAL:
 
+    gdal_translate -of GTiff -a_srs epsg:4326 image.png image.tif
+
+*todo: test, maybe 4326 is a lie*
 
 ### Get an image for printing
 
