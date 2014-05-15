@@ -13,12 +13,12 @@ and can be sure you will get what you intended.
 For example, this is a sample rendering of an area in Talling on zoom 17, by Nik4, Nik2img
 and as seen on the default layer on osm.org:
 
-![nik4 - osm.org - nik2img](demo-zoom-levels.png)
+![nik4 - osm.org - nik2img](img/demo-zoom-levels.png)
 
 Also it can use real-world units, that is, millimeters (and prefers to). Specify dimensions
 for printing, choose bounding box and ppi scale — and the result won't disappoint.
 
-![A4 options](paper-options.png)
+![A4 options](img/paper-options.png)
 
 ## How to use it
 
@@ -33,6 +33,8 @@ Again, run `./nik4.py -h` to see the list of all available options. Here are som
 ### Get an image for printing
 
 ### Generate a vector drawing from a map
+
+![SVG labels quality](img/svg-factor.png)
 
 ## See also
 
