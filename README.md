@@ -40,11 +40,33 @@ and desired image size in pixels:
 
     ./nik4.py -c 0 51.477 --size-px 800 600 -z 17 openstreetmap-carto/osm.xml party-before.png
 
+### Make a georeferenced raster image
+
+Some people prefer planning routes with OziExplorer or similar programs. Or want to take a big
+raster map with them on the road. For that a very big image is needed. Usually they turn to
+downloading and stitching hundreds of tiles, but with Nik4 you can make Mapnik produce a better
+looking map, faster and without bothering tile server administrators.
+
+Since you are not bound to any tile provider, you should employ [TileMill](https://www.mapbox.com/tilemill/)
+for customizing your map style: for example, remove forest on low zooms, add contrast to
+road lines, render more villages, highlight useful POI and cycling routes.
+
+    ./nik4.py -b 25 61.6 30.6 63.3 -z 13 custom.xml kuopio.png --ozi kuopio.map
+
+This will render 12345x6789 (*todo*) image with a georeferencing file ready to open in OziExplorer.
+For a `.wld` file, which can be used in desktop GIS applications or for creating a GeoTIFF file,
+use `--wld` option.
+
+
 ### Get an image for printing
 
 Let's say you need a 1:50000 image of a city center for printing on a A4 sheet with margins.
 
+*todo*
+
 ### Print a route
+
+*todo*
 
 ### Generate a vector drawing from a map
 
