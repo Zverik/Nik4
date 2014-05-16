@@ -109,10 +109,9 @@ Just add your route to the style like this:
 <Layer name="route" status="off" srs="+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs">
     <StyleName>route</StyleName>
     <Datasource>
-       <Parameter name="type">ogr></Parameter>
-       <Parameter name="file"><![CDATA[/home/user/route.gpx]]></Parameter>
-       <Parameter name="layer">tracks></Parameter>
-       <Parameter name="all_layers">route_points,routes,track_points,waypoints></Parameter>
+       <Parameter name="type">ogr</Parameter>
+       <Parameter name="file">/home/user/route.gpx</Parameter>
+       <Parameter name="layer">tracks</Parameter>
     </Datasource>
   </Layer>
 ```
