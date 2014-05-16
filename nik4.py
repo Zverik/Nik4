@@ -169,11 +169,18 @@ if __name__ == "__main__":
 		size = [int(round(dim_mm[0] * ppmm)), int(round(dim_mm[1] * ppmm))]
 
 	# scale can be specified with zoom or with 1:NNN scale
+	fix_scale = False
 	if options.zoom:
 		scale = 2 * 3.14159 * 6378137 / 2 ** (options.zoom + 8) / scale_factor
 	elif options.scale:
 		scale = options.scale * 0.00028 / scale_factor
-		scale = scale * 2 # I don't know why, but without it scale is incorrect
+		# Now we have to divide by cos(lat), but we might not know latitude at this point
+		if options.center:
+			scale = scale / math.cos(math.radians(center.y))
+		elif options.bbox:
+			scale = scale / math.cos(math.radians((options.bbox[3] + options.bbox[1]) / 2))
+		else:
+			fix_scale = True
 
 	if options.bbox:
 		bbox = options.bbox
@@ -196,6 +203,9 @@ if __name__ == "__main__":
 	# get bbox from layer extents
 	if options.fit:
 		bbox = layer_bbox(m, options.fit.split(','), bbox)
+		# here's where we can fix scale, no new bboxes below
+		if bbox and fix_scale:
+			scale = scale / math.cos(math.radians(transform.backward(bbox.center()).y))
 		# expand bbox with padding in mm
 		if bbox and options.padding and (scale or size):
 			if scale:
