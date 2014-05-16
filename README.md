@@ -1,7 +1,8 @@
 # Nik4
 
 This is a mapnik-to-image exporting script. It requires only `mapnik-python` bindings.
-Run it with `-h` option to see available options and their descriptions.
+Install it with `pip install nik4` or `easy_install nik4` and run with `-h` option
+to see available options and their descriptions.
 
 ## Why is it better
 
@@ -10,7 +11,7 @@ it won't take a pixel less or more. It won't shrink a bounding box or distort li
 specifying so called "scale factor". When you need a 300 dpi image, you tell it `--ppi 300`
 and can be sure you will get what you intended.
 
-For example, this is a sample rendering of an area in Tallin on zoom 17, by Nik4, Nik2img
+For example, this is a sample rendering of an area in Tallinn on zoom 17, by Nik4, Nik2img
 and as seen on the default layer on osm.org:
 
 ![nik4 - osm.org - nik2img](img/demo-zoom-levels.png)
@@ -21,7 +22,7 @@ are intuitive and plenty, and you will be amazed how much tasks became simpler w
 
 ## How to use it
 
-Again, run `./nik4.py -h` to see the list of all available options. Here are some examples.
+Again, run `nik4.py -h` to see the list of all available options. Here are some examples.
 
 ### Watch a mapping party area
 
@@ -30,14 +31,14 @@ to populate the database with a planet extract. For instructions see
 [here](http://switch2osm.org/loading-osm-data/) or [here](http://wiki.openstreetmap.org/wiki/User:Zverik/Tile_Server_on_Fedora_20).
 Get bounds by visiting [osm.org](http://openstreetmap.org): click "Export" and "Choose another region". Then:
 
-    ./nik4.py -b -0.009 51.47 0.013 51.484 -z 17 openstreetmap-carto/osm.xml party-before.png
+    nik4.py -b -0.009 51.47 0.013 51.484 -z 17 openstreetmap-carto/osm.xml party-before.png
 
 Here `osm.xml` is the compiled Mapnik style.
 Then you can [update](http://wiki.openstreetmap.org/wiki/Minutely_Mapnik) you database and generate
 snapshots of an area as it is being mapped. Alternatively, you can specify an area with its center
 and desired image size in pixels:
 
-    ./nik4.py -c 0 51.477 --size-px 800 600 -z 17 openstreetmap-carto/osm.xml party-before.png
+    nik4.py -c 0 51.477 --size-px 800 600 -z 17 openstreetmap-carto/osm.xml party-before.png
 
 ### Make a georeferenced raster image
 
@@ -50,7 +51,7 @@ Since you are not bound to any tile provider, you should employ [TileMill](https
 for customizing your map style: for example, remove forest on low zooms, add contrast to
 road lines, render more villages, highlight useful POI and cycling routes.
 
-    ./nik4.py -b 25 61.6 30.6 63.3 -z 13 custom.xml kuopio.png --ozi kuopio.map
+    nik4.py -b 25 61.6 30.6 63.3 -z 13 custom.xml kuopio.png --ozi kuopio.map
 
 This will render 16311×10709 image with a georeferencing file ready to open in OziExplorer.
 For a `.wld` file, which can be used in desktop GIS applications or for creating a GeoTIFF file,
@@ -63,7 +64,7 @@ use `--wld` option. You can convert png+wld to geotiff with GDAL:
 You would likely encounter out of memory error while trying to generate 16311×10709 image from the last
 chapter. Despair not:
 
-    ./nik4.py -b 25 61.6 30.6 63.3 -z 13 custom.xml kuopio.png --ozi kuopio.map --tiles 4
+    nik4.py -b 25 61.6 30.6 63.3 -z 13 custom.xml kuopio.png --ozi kuopio.map --tiles 4
 
 Voilà — now Mapnik has to generate 16 images of a manageable size 4078×2678. After that Nik4 will call
 `montage` from the Imagemagick package to stitch all tiles together.
@@ -85,7 +86,7 @@ trouble opening an image surpassing 200 megapixels.
 
 Let's say you need a 1:5000 image of a city center for printing on a A4 sheet with margins.
 
-    ./nik4.py -s 5000 --ppi 300 -a 4 -c 24.1094 56.9488 --margin 10 ~/osm/krym/carto/osm.xml 4print.png
+    nik4.py -s 5000 --ppi 300 -a 4 -c 24.1094 56.9488 --margin 10 ~/osm/krym/carto/osm.xml 4print.png
 
 What you get is a raster image, which when printed on an A4 with 300 dpi resolution, would have 10 mm margins
 and scale of exactly 50 m in a cm. See the picture above for explanation of margins and other options.
@@ -120,11 +121,11 @@ Note that you can add it in any place: for example, between road and label layer
 obscure any text. Also note `status="off"`: this layer won't be drawn by default. So if you want
 to export a clean map for the extent of your route (or any other) layer, use those options:
 
-    ./nik4.py --fit route --size-px 400 700 osm.xml route_area.png
+    nik4.py --fit route --size-px 400 700 osm.xml route_area.png
 
 To enable drawing of the layer, use `--add-layers` option:
 
-    ./nik4.py --fit route --add-layers route,stops --ppi 150 -a -6 osm.xml route.png
+    nik4.py --fit route --add-layers route,stops --ppi 150 -a -6 osm.xml route.png
 
 You can list many layers, separating them with commas. And you can hide some layers:
 `--hide-layers contours,shields`. Obviously you can fit several layers at once, as well
@@ -135,7 +136,7 @@ something does not appear, check your style file for exact layer names.
 
 It's as easy as adding an `.svg` extension to the output file name.
 
-    ./nik4.py --fit route -a -5 --factor 4 osm.xml map.svg
+    nik4.py --fit route -a -5 --factor 4 osm.xml map.svg
 
 Why did I use `--factor` (it's the same as using `--ppi 362.8`, which is 90.7 * 4)? Shouldn't
 vector images be independent of the resolution? Well, the problem is in label kerning:

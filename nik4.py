@@ -5,7 +5,8 @@
 # Run it with -h to see the list of options
 # Written by Ilya Zverev, licensed WTFPL
 
-import sys, os, mapnik, argparse, math
+import mapnik
+import sys, os, argparse, math
 
 try:
 	import cairo
