@@ -225,6 +225,11 @@ if __name__ == "__main__":
 		else:
 			raise Exception('Image dimensions or scale were not specified in any way')
 
+	if need_cairo and options.tiles > 1:
+		options.tiles = 1
+	if max(size[0], size[1]) / options.tiles > 16384:
+		raise Exception('Image size exceeds mapnik limit ({} > {}), use --tiles'.format(max(size[0], size[1]) / options.tiles, 16384))
+
 	# add / remove some layers
 	if options.layers:
 		filter_layers(m, options.layers.split(','))
@@ -257,8 +262,13 @@ if __name__ == "__main__":
 			mapnik.render(m, im, scale_factor)
 			im.save(options.output, fmt)
 		else:
-			scale = m.scale()
-			bbox = m.envelope()
+			# we cannot make mapnik calculate scale for us, so fixing aspect ratio outselves
+			rdiff = (bbox.maxx-bbox.minx) / (bbox.maxy-bbox.miny) - size[0] / size[1]
+			if rdiff > 0:
+				bbox.height((bbox.maxx - bbox.minx) * size[1] / size[0])
+			elif rdiff < 0:
+				bbox.width((bbox.maxy - bbox.miny) * size[0] / size[1])
+			scale = (bbox.maxx - bbox.minx) / size[0]
 			width = max(32, int(math.ceil(1.0 * size[0] / options.tiles)))
 			height = max(32, int(math.ceil(1.0 * size[1] / options.tiles)))
 			m.resize(width, height)
@@ -273,7 +283,7 @@ if __name__ == "__main__":
 				for column in range(0, tile_cnt[0]):
 					if options.debug:
 						print 'tile={},{}'.format(row, column)
-					m.zoom_to_box(mapnik.Box2d(bbox.minx + width * scale * column, bbox.maxy - height * scale * row, bbox.minx + width * scale * (column + 1), bbox.maxy - height * scale * (row + 1)))
+					m.zoom_to_box(mapnik.Box2d(bbox.minx + 1.0 * width * scale * column, bbox.maxy - 1.0 * height * scale * row, bbox.minx + 1.0 * width * scale * (column + 1), bbox.maxy - 1.0 * height * scale * (row + 1)))
 					im = mapnik.Image(width if column < tile_cnt[0] - 1 else size[0] - width * (tile_cnt[0] - 1), height if row < tile_cnt[1] - 1 else size[1] - height * (tile_cnt[1] - 1))
 					mapnik.render(m, im, scale_factor)
 					tile_name = tmp_tile.format(row, column, options.output)
