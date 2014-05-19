@@ -1,6 +1,6 @@
 # Nik4 Change History
 
-## 1.2, *master*
+## 1.2, 19.05.2014
 
 * Fixed georeferencing of tiled maps. [#4](https://github.com/Zverik/Nik4/issues/4)
 * World files are now written in EPSG:3857 projection.
