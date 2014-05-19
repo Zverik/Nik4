@@ -6,7 +6,7 @@
 # Written by Ilya Zverev, licensed WTFPL
 
 import mapnik
-import sys, os, argparse, math
+import sys, os, re, argparse, math
 
 try:
 	import cairo
@@ -93,6 +93,34 @@ def prepare_wld(bbox, mwidth, mheight):
 	top_pixel_center_y = bbox.miny + pixel_y_size * 0.5
 	return ''.join(["{:.8f}\n".format(n) for n in [pixel_x_size, pixel_y_size, 0.0, 0.0, left_pixel_center_x, top_pixel_center_y]])
 
+def parse_url(url, options):
+	"""Parse map URL into options map"""
+	lat = None
+	lon = None
+	zoom = None
+	m = re.search(r'[#/=]([0-9]{1,2})/(-?[0-9]{1,2}\.[0-9]+)/(-?[0-9]{1,3}\.[0-9]+)', url)
+	if m:
+		zoom = int(m.group(1))
+		lat = float(m.group(2))
+		lon = float(m.group(3))
+	else:
+		m = re.search(r'lat=(-[0-9]{1,2}\.[0-9]+)', url, flags=re.IGNORECASE)
+		if m:
+			lat = float(m.group(1))
+		m = re.search(r'lon=(-[0-9]{1,3}\.[0-9]+)', url, flags=re.IGNORECASE)
+		if m:
+			lon = float(m.group(1))
+		m = re.search(r'zoom=([0-9]{1,2})', url, flags=re.IGNORECASE)
+		if m:
+			zoom = int(m.group(1))
+	print lat, lon, zoom
+	if zoom and not options.zoom:
+		options.zoom = zoom
+	if lat and lon and not options.center:
+		options.center = [lon, lat]
+	if not options.size and not options.size_px and not options.a and not options.fit and not options.bbox:
+		options.size_px = [1280, 1024]
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Tile-aware mapnik image renderer')
 	parser.add_argument('-z', '--zoom', type=float, help='Target zoom level')
@@ -112,11 +140,12 @@ if __name__ == "__main__":
 	parser.add_argument('--add-layers', help='Map layers to include, comma-separated')
 	parser.add_argument('--hide-layers', help='Map layers to hide, comma-separated')
 
-	parser.add_argument('-f', '--format', dest='fmt', help='Target file format (by default looks at extension)')
+	parser.add_argument('--url', help='URL of a map to center on')
 	parser.add_argument('--ozi', type=argparse.FileType('w'), help='Generate ozi map file')
 	parser.add_argument('--wld', type=argparse.FileType('w'), help='Generate world file')
 	parser.add_argument('-t', '--tiles', type=int, choices=range(1, 13), default=1, help='Write N×N tiles, then join using imagemagick')
 	parser.add_argument('-v', '--debug', action='store_true', default=False, help='Display calculated values')
+	parser.add_argument('-f', '--format', dest='fmt', help='Target file format (by default looks at extension)')
 	parser.add_argument('style', help='Style file for mapnik')
 	parser.add_argument('output', help='Resulting image file')
 	options = parser.parse_args()
@@ -125,6 +154,9 @@ if __name__ == "__main__":
 	scale = None
 	size = None
 	bbox = None
+
+	if options.url:
+		parse_url(options.url, options)
 
 	# format should not be empty
 	if options.fmt:

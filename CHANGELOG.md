@@ -4,6 +4,7 @@
 
 * Fixed georeferencing of tiled maps. [#4](https://github.com/Zverik/Nik4/issues/4)
 * World files are now written in EPSG:3857 projection.
+* Added `--url` option for leaflet / openlayers map URLs. [#5](https://github.com/Zverik/Nik4/issues/5)
 
 ## 1.1, 18.05.2014
 
