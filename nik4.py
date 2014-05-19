@@ -46,13 +46,13 @@ def select_layers(m, enable, disable):
 		if l.name in disable:
 			l.active = False
 
-def prepare_ozi(m, name):
+def prepare_ozi(mbbox, mwidth, mheight, name):
 	"""Create georeferencing file for OziExplorer"""
 	def deg(value, is_lon):
 		degrees = math.floor(abs(value))
 		minutes = (abs(value) - degrees) * 60
 		return '{:4d},{:3.5F},{}'.format(int(round(degrees)), minutes, ('W' if is_lon else 'S') if value < 0 else ('E' if is_lon else 'N'))
-	bbox = transform.backward(m.envelope())
+	bbox = transform.backward(mbbox)
 	points = "\n".join(['Point{:02d},xy,     ,     ,in, deg,    ,        ,N,    ,        ,E, grid,   ,           ,           ,N'.format(n) for n in range(3,31)])
 	return '''OziExplorer Map Data File Version 2.2
 Nik4
@@ -73,25 +73,24 @@ Moving Map Parameters = MM?    These follow if they exist
 MM0,Yes
 MMPNUM,4
 MMPXY,1,0,0
-'''.format(name, deg(bbox.maxy, False), deg(bbox.minx, True), m.width - 1, m.height - 1, deg(bbox.miny, False), deg(bbox.maxx, True), points) \
-	+ "MMPXY,2,{},0\n".format(m.width) \
-	+ "MMPXY,3,{},{}\n".format(m.width, m.height) \
-	+ "MMPXY,4,0,{}\n".format(m.height) \
+'''.format(name, deg(bbox.maxy, False), deg(bbox.minx, True), mwidth - 1, mheight - 1, deg(bbox.miny, False), deg(bbox.maxx, True), points) \
+	+ "MMPXY,2,{},0\n".format(mwidth) \
+	+ "MMPXY,3,{},{}\n".format(mwidth, mheight) \
+	+ "MMPXY,4,0,{}\n".format(mheight) \
 	+ 'MMPLL,1,{:4.6f},{:4.6f}\n'.format(bbox.minx, bbox.maxy) \
 	+ 'MMPLL,2,{:4.6f},{:4.6f}\n'.format(bbox.maxx, bbox.maxy) \
 	+ 'MMPLL,3,{:4.6f},{:4.6f}\n'.format(bbox.maxx, bbox.miny) \
 	+ 'MMPLL,4,{:4.6f},{:4.6f}\n'.format(bbox.minx, bbox.miny) \
-	+ "MM1B,{}\n".format(m.scale() * math.cos(math.radians(bbox.center().y))) \
+	+ "MM1B,{}\n".format((mbbox.maxx - mbbox.minx) / mwidth * math.cos(math.radians(bbox.center().y))) \
 	+ "MOP,Map Open Position,0,0\n" \
-	+ "IWH,Map Image Width/Height,{},{}\n".format(m.width, m.height)
+	+ "IWH,Map Image Width/Height,{},{}\n".format(mwidth, mheight)
 
-def prepare_wld(m):
+def prepare_wld(bbox, mwidth, mheight):
 	"""Create georeferencing world file"""
-	bbox = transform.backward(m.envelope())
-	pixel_x_size = (bbox.maxx - bbox.minx) / m.width
-	pixel_y_size = (bbox.maxy - bbox.miny) / m.height
+	pixel_x_size = (bbox.maxx - bbox.minx) / mwidth
+	pixel_y_size = (bbox.maxy - bbox.miny) / mheight
 	left_pixel_center_x = bbox.minx + pixel_x_size * 0.5
-	top_pixel_center_y = bbox.maxy - pixel_y_size * 0.5
+	top_pixel_center_y = bbox.miny + pixel_y_size * 0.5
 	return ''.join(["{:.8f}\n".format(n) for n in [pixel_x_size, pixel_y_size, 0.0, 0.0, left_pixel_center_x, top_pixel_center_y]])
 
 if __name__ == "__main__":
@@ -244,6 +243,12 @@ if __name__ == "__main__":
 		print 'bbox_wgs84={}'.format(transform.backward(bbox) if bbox else None)
 		print 'layers=' + ','.join([l.name for l in m.layers if l.active])
 
+	# generate metadata
+	if options.ozi:
+		options.ozi.write(prepare_ozi(bbox, size[0], size[1], options.output))
+	if options.wld:
+		options.wld.write(prepare_wld(bbox, size[0], size[1]))
+
 	# export image
 	m.aspect_fix_mode = mapnik.aspect_fix_mode.GROW_BBOX;
 	m.resize(size[0], size[1])
@@ -295,9 +300,3 @@ if __name__ == "__main__":
 			if result == 0:
 				for tile in tile_files:
 					os.remove(tile)
-
-	# generate metadata
-	if options.ozi:
-		options.ozi.write(prepare_ozi(m, options.output))
-	if options.wld:
-		options.wld.write(prepare_wld(m))
