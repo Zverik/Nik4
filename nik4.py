@@ -90,8 +90,8 @@ def prepare_wld(bbox, mwidth, mheight):
 	pixel_x_size = (bbox.maxx - bbox.minx) / mwidth
 	pixel_y_size = (bbox.maxy - bbox.miny) / mheight
 	left_pixel_center_x = bbox.minx + pixel_x_size * 0.5
-	top_pixel_center_y = bbox.miny + pixel_y_size * 0.5
-	return ''.join(["{:.8f}\n".format(n) for n in [pixel_x_size, pixel_y_size, 0.0, 0.0, left_pixel_center_x, top_pixel_center_y]])
+	top_pixel_center_y = bbox.maxy - pixel_y_size * 0.5
+	return ''.join(["{:.8f}\n".format(n) for n in [pixel_x_size, 0.0, 0.0, -pixel_y_size, left_pixel_center_x, top_pixel_center_y]])
 
 def parse_url(url, options):
 	"""Parse map URL into options map"""

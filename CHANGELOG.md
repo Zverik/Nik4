@@ -1,5 +1,9 @@
 # Nik4 Change History
 
+## 1.3, *master*
+
+* Fixed value order in world files.
+
 ## 1.2, 19.05.2014
 
 * Fixed georeferencing of tiled maps. [#4](https://github.com/Zverik/Nik4/issues/4)
