@@ -3,6 +3,7 @@
 ## 1.3, *master*
 
 * Fixed value order in world files.
+* Added more paper formats. [#7](https://github.com/Zverik/Nik4/issues/7)
 
 ## 1.2, 19.05.2014
 

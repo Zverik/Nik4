@@ -118,8 +118,34 @@ def parse_url(url, options):
 		options.zoom = zoom
 	if lat and lon and not options.center:
 		options.center = [lon, lat]
-	if not options.size and not options.size_px and not options.a and not options.fit and not options.bbox:
+	if not options.size and not options.size_px and not options.paper and not options.fit and not options.bbox:
 		options.size_px = [1280, 1024]
+
+def get_paper_size(name):
+	"""Returns paper size for name, [long, short] sides in mm"""
+	# ISO A*
+	m = re.match(r'^a?(\d)$', name)
+	if m:
+		return [math.floor(1000 / 2**((2*int(m.group(1)) - 1) / 4.0) + 0.2), math.floor(1000 / 2**((2*(int(m.group(1)) + 1) - 1) / 4.0) + 0.2)]
+	# ISO B*
+	m = re.match(r'^b(\d)$', name)
+	if m:
+		return [math.floor(1000 / 2**((int(m.group(1)) - 1) / 2.0) + 0.2), math.floor(1000 / 2**(int(m.group(1)) / 2.0) + 0.2)]
+	# German extensions
+	if name == '2a0':
+		return [2378, 1682]
+	if name == '4a0':
+		return [1682, 1189]
+	# US Legal
+	if re.match(r'^leg', name):
+		return [355.6, 215.9]
+	# US Letter
+	if re.match(r'^l', name):
+		return [279.4, 215.9]
+	# Cards
+	if re.match(r'^c(?:re|ar)d', name):
+		return [85.6, 54]
+	return None
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Tile-aware mapnik image renderer')
@@ -128,7 +154,7 @@ if __name__ == "__main__":
 	parser.add_argument('--factor', type=float, help='Scale factor (affects ppi, default=1)', default=1)
 	parser.add_argument('-s', '--scale', type=float, help='Scale as in 1:100000 (specifying ppi is recommended)')
 	parser.add_argument('-b', '--bbox', nargs=4, type=float, metavar=('Xmin', 'Ymin', 'Xmax', 'Ymax'), help='Bounding box')
-	parser.add_argument('-a', type=int, choices=range(-7, 8), help='Paper format: -a 4 for landscape A4, -a -4 for portrait A4')
+	parser.add_argument('-a', '--paper', help='Paper format: -a +4 for landscape A4, -a -4 for portrait A4, -a letter for autorotated US Letter')
 	parser.add_argument('-d', '--size', nargs=2, metavar=('W', 'H'), type=int, help='Target dimensions in mm')
 	parser.add_argument('-x', '--size-px', nargs=2, metavar=('W', 'H'), type=int, help='Target dimensions in pixels')
 	parser.add_argument('-m', '--margin', type=int, help='Amount in mm to reduce paper size')
@@ -154,6 +180,7 @@ if __name__ == "__main__":
 	scale = None
 	size = None
 	bbox = None
+	rotate = False
 
 	if options.url:
 		parse_url(options.url, options)
@@ -169,9 +196,19 @@ if __name__ == "__main__":
 	need_cairo = fmt in ['svg', 'pdf']
 	
 	# get image size in millimeters
-	if options.a:
-		dim_mm = [math.floor(1000 / 2**((2*abs(options.a) - 1) / 4.0) + 0.2), math.floor(1000 / 2**((2*(abs(options.a) + 1.0) - 1) / 4) + 0.2)]
-		if options.a < 0:
+	if options.paper:
+		portrait = False
+		if options.paper[0] == '-':
+			portrait = True
+			options.paper = options.paper[1:]
+		elif options.paper[0] == '+':
+			options.paper = options.paper[1:]
+		else:
+			rotate = True
+		dim_mm = get_paper_size(options.paper.lower())
+		if not dim_mm:
+			raise Exception('Incorrect paper format: ' + options.paper)
+		if portrait:
 			dim_mm = [dim_mm[1], dim_mm[0]]
 	elif options.size:
 		dim_mm = options.size
@@ -218,6 +255,8 @@ if __name__ == "__main__":
 	# all calculations are in EPSG:3857 projection (it's easier)
 	if bbox:
 		bbox = transform.forward(mapnik.Box2d(*bbox))
+		if size and size[0] > size[1] and rotate and bbox.maxy - bbox.miny > bbox.maxx - bbox.minx:
+			size = [size[1], size[0]]
 
 	# calculate bbox through center, zoom and target size
 	if not bbox and options.center and size and scale:
