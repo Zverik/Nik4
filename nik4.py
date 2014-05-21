@@ -172,6 +172,7 @@ if __name__ == "__main__":
 	parser.add_argument('-t', '--tiles', type=int, choices=range(1, 13), default=1, help='Write N×N tiles, then join using imagemagick')
 	parser.add_argument('-v', '--debug', action='store_true', default=False, help='Display calculated values')
 	parser.add_argument('-f', '--format', dest='fmt', help='Target file format (by default looks at extension)')
+	parser.add_argument('--base', help='Base path for style file, in case it\'s piped to stdin')
 	parser.add_argument('style', help='Style file for mapnik')
 	parser.add_argument('output', help='Resulting image file')
 	options = parser.parse_args()
@@ -265,9 +266,20 @@ if __name__ == "__main__":
 		h = size[1] * scale / 2
 		bbox = mapnik.Box2d(center.x-w, center.y-h, center.x+w, center.y+h)
 
+	# reading style xml into memory for preprocessing
+	if options.style == '-':
+		style_xml = sys.stdin.read()
+		style_path = ''
+	else:
+		with open(options.style, 'r') as style_file:
+			style_xml = style_file.read()
+		style_path = os.path.dirname(options.style)
+	if options.base:
+		style_path = options.base
+
 	# for layer processing we need to create the Map object
 	m = mapnik.Map(100, 100) # temporary size, will be changed before output
-	mapnik.load_map(m, options.style)
+	mapnik.load_map_from_string(m, style_xml, False, style_path)
 	m.srs = p3857.params()
 
 	# get bbox from layer extents
@@ -295,7 +307,7 @@ if __name__ == "__main__":
 		else:
 			raise Exception('Image dimensions or scale were not specified in any way')
 
-	if need_cairo and options.tiles > 1:
+	if options.output == '-' or (need_cairo and options.tiles > 1):
 		options.tiles = 1
 	if max(size[0], size[1]) / options.tiles > 16384:
 		raise Exception('Image size exceeds mapnik limit ({} > {}), use --tiles'.format(max(size[0], size[1]) / options.tiles, 16384))
