@@ -147,6 +147,31 @@ def get_paper_size(name):
 		return [85.6, 54]
 	return None
 
+def xml_vars(style, variables):
+	"""Replace ${name:default} from style with variables[name] or 'default'"""
+	# Convert variables to a dict
+	v = {}
+	for kv in variables:
+		keyvalue = kv.split('=', 1)
+		if len(keyvalue) > 1:
+			v[keyvalue[0]] = keyvalue[1].replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
+	# Scan all variables in style
+	r = re.compile(r'\$\{([a-z0-9]+)(?::([^}]*))?\}')
+	rstyle = ''
+	last = 0
+	for m in r.finditer(style):
+		if m.group(1) in v:
+			value = v[m.group(1)]
+		elif m.group(2) is not None:
+			value = m.group(2)
+		else:
+			raise Exception('Found required style parameter: ' + m.group(1))
+		rstyle = rstyle + style[last:m.start()] + value
+		last = m.end()
+	if last < len(style):
+		rstyle = rstyle + style[last:]
+	return rstyle
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Tile-aware mapnik image renderer')
 	parser.add_argument('-z', '--zoom', type=float, help='Target zoom level')
@@ -173,6 +198,7 @@ if __name__ == "__main__":
 	parser.add_argument('-v', '--debug', action='store_true', default=False, help='Display calculated values')
 	parser.add_argument('-f', '--format', dest='fmt', help='Target file format (by default looks at extension)')
 	parser.add_argument('--base', help='Base path for style file, in case it\'s piped to stdin')
+	parser.add_argument('--vars', nargs='*', help='List of variables (name=value) to substitute in style file (use ${name:default})')
 	parser.add_argument('style', help='Style file for mapnik')
 	parser.add_argument('output', help='Resulting image file')
 	options = parser.parse_args()
@@ -276,6 +302,8 @@ if __name__ == "__main__":
 		style_path = os.path.dirname(options.style)
 	if options.base:
 		style_path = options.base
+	if 'vars' in options:
+		style_xml = xml_vars(style_xml, options.vars)
 
 	# for layer processing we need to create the Map object
 	m = mapnik.Map(100, 100) # temporary size, will be changed before output

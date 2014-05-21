@@ -5,6 +5,7 @@
 * Fixed value order in world files.
 * Added more paper formats. [#7](https://github.com/Zverik/Nik4/issues/7)
 * Style XML can now be streamed from stdin.
+* Style XML can now contain variables `${name:default}`, set them with `--vars name=value`. [#6](https://github.com/Zverik/Nik4/issues/6)
 
 ## 1.2, 19.05.2014
 
