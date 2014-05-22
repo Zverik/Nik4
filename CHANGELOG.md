@@ -1,6 +1,6 @@
 # Nik4 Change History
 
-## 1.3, *master*
+## 1.3, 22.05.2014
 
 * Fixed value order in world files.
 * Added more paper formats. [#7](https://github.com/Zverik/Nik4/issues/7)

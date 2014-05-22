@@ -40,6 +40,10 @@ and desired image size in pixels:
 
     nik4.py -c 0 51.477 --size-px 800 600 -z 17 openstreetmap-carto/osm.xml party-before.png
 
+Even simpler, instead of `--center` and `--zoom` options, just grab an URL of a place:
+
+    nik4.py --url http://www.openstreetmap.org/#map=16/55.9865/37.2160 osm.xml screenshot.png
+
 ### Make a georeferenced raster image
 
 Some people prefer planning routes with OziExplorer or similar programs. Or want to take a big
@@ -90,8 +94,9 @@ Let's say you need a 1:5000 image of a city center for printing on a A4 sheet wi
 
 What you get is a raster image, which when printed on an A4 with 300 dpi resolution, would have 10 mm margins
 and scale of exactly 50 m in a cm. See the picture above for explanation of margins and other options.
-By default paper is in landscape, horizontal orientation. To turn it portrait, use negative values
-for `-a` option. Or enter numbers by hand: `-d 150 100` will export a 15×10 postcard map.
+Formats can be `a0-a9`, `letter`, `card` and so on.  The paper orientation depends on a bbox;
+to force landscape or portrait orientation prepend the format with `+` or `-` characters.
+Or don't bother and enter numbers by hand: `-d 150 100` will export a 15×10 postcard map.
 
 ### Print a route
 
@@ -124,12 +129,32 @@ to export a clean map for the extent of your route (or any other) layer, use tho
 
 To enable drawing of the layer, use `--add-layers` option:
 
-    nik4.py --fit route --add-layers route,stops --ppi 150 -a -6 osm.xml route.png
+    nik4.py --fit route --add-layers route,stops --ppi 150 -a 6 osm.xml route.png
 
 You can list many layers, separating them with commas. And you can hide some layers:
 `--hide-layers contours,shields`. Obviously you can fit several layers at once, as well
 as specify a bounding box to include on a map. All layer names are case-sensitive, so if
 something does not appear, check your style file for exact layer names.
+
+### Print a different route each time
+
+Nik4 supports variables in XML styles: `${name:default}` defines a variable with the given name
+and its default value (which can be omitted, along with `:`). To substitute variable
+definitions with values or defaults, use `--vars` parameter. For example, let's make
+stroke width in the last example configurable, and request GPX file name:
+
+```xml
+    <LineSymbolizer stroke-width="${width:5}" stroke="#012d64" stroke-linejoin="round" stroke-linecap="round" />
+    ...
+      <Parameter name="file">${route}</Parameter>
+```
+
+Now to make an image of a route, use this command:
+
+    nik4.py --fit route --ppi 150 -a 6 --vars width=8 route=~/routes/day2.gpx osm.xml route.png
+
+Note that path would likely to be resolved relative to the XML file location. If you omit `route` variable
+in this example, you'll get an error message.
 
 ### Generate a vector drawing from a map
 
