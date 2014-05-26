@@ -302,7 +302,7 @@ if __name__ == "__main__":
 		style_path = os.path.dirname(options.style)
 	if options.base:
 		style_path = options.base
-	if 'vars' in options:
+	if options.vars:
 		style_xml = xml_vars(style_xml, options.vars)
 
 	# for layer processing we need to create the Map object
