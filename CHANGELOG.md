@@ -1,5 +1,9 @@
 # Nik4 Change History
 
+## 1.4, *master*
+
+* Added `--dpi`, a synonim for `--ppi`.
+
 ## 1.3, 22.05.2014
 
 * Fixed value order in world files.

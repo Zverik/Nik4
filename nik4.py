@@ -175,7 +175,7 @@ def xml_vars(style, variables):
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Tile-aware mapnik image renderer')
 	parser.add_argument('-z', '--zoom', type=float, help='Target zoom level')
-	parser.add_argument('-p', '--ppi', type=float, help='Pixels per inch (alternative to scale)')
+	parser.add_argument('-p', '--ppi', '--dpi', type=float, help='Pixels per inch (alternative to scale)')
 	parser.add_argument('--factor', type=float, help='Scale factor (affects ppi, default=1)', default=1)
 	parser.add_argument('-s', '--scale', type=float, help='Scale as in 1:100000 (specifying ppi is recommended)')
 	parser.add_argument('-b', '--bbox', nargs=4, type=float, metavar=('Xmin', 'Ymin', 'Xmax', 'Ymax'), help='Bounding box')
