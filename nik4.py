@@ -156,7 +156,7 @@ def xml_vars(style, variables):
 		if len(keyvalue) > 1:
 			v[keyvalue[0]] = keyvalue[1].replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
 	# Scan all variables in style
-	r = re.compile(r'\$\{([a-z0-9]+)(?::([^}]*))?\}')
+	r = re.compile(r'\$\{([a-z0-9_]+)(?::([^}]*))?\}')
 	rstyle = ''
 	last = 0
 	for m in r.finditer(style):

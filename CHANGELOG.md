@@ -3,6 +3,7 @@
 ## 1.4, *master*
 
 * Added `--dpi`, a synonim for `--ppi`.
+* Now allowing underscores in variable names.
 
 ## 1.3, 22.05.2014
 
