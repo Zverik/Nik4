@@ -6,6 +6,7 @@
 * You can specify 0 for one of the dimensions: first one is considered "long" side, the second is "short". E.g. for "portrait" bbox size "0 123" could become "123 200". `--norotate` option also applies to this.
 * Added `--dpi`, a synonim for `--ppi`.
 * Now allowing underscores in variable names.
+* Streaming output to `-` (stdout) now works.
 
 ## 1.3, 22.05.2014
 

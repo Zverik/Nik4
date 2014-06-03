@@ -6,7 +6,7 @@
 # Written by Ilya Zverev, licensed WTFPL
 
 import mapnik
-import sys, os, re, argparse, math
+import sys, os, re, argparse, math, tempfile
 
 try:
 	import cairo
@@ -380,18 +380,22 @@ if __name__ == "__main__":
 	m.resize(size[0], size[1])
 	m.zoom_to_box(bbox)
 
+	outfile = options.output
+	if options.output == '-':
+		outfile = tempfile.TemporaryFile(mode='w+b')
+
 	if need_cairo:
 		if HAS_CAIRO:
-			surface = cairo.SVGSurface(options.output, size[0], size[1]) if fmt == 'svg' else cairo.PDFSurface(options.output, size[0], size[1])
+			surface = cairo.SVGSurface(outfile, size[0], size[1]) if fmt == 'svg' else cairo.PDFSurface(outfile, size[0], size[1])
 			mapnik.render(m, surface, scale_factor, 0, 0)
 			surface.finish()
 		else:
-			mapnik.render_to_file(m, options.output, fmt)
+			mapnik.render_to_file(m, outfile, fmt)
 	else:
 		if options.tiles == 1:
 			im = mapnik.Image(size[0], size[1])
 			mapnik.render(m, im, scale_factor)
-			im.save(options.output, fmt)
+			im.save(outfile, fmt)
 		else:
 			# we cannot make mapnik calculate scale for us, so fixing aspect ratio outselves
 			rdiff = (bbox.maxx-bbox.minx) / (bbox.maxy-bbox.miny) - size[0] / size[1]
@@ -426,3 +430,13 @@ if __name__ == "__main__":
 			if result == 0:
 				for tile in tile_files:
 					os.remove(tile)
+
+	if options.output == '-':
+		if sys.platform == "win32":
+			# fix binary output on windows
+			import msvcrt
+			msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+
+		outfile.seek(0)
+		print outfile.read()
+		outfile.close()
