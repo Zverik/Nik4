@@ -180,8 +180,9 @@ if __name__ == "__main__":
 	parser.add_argument('-s', '--scale', type=float, help='Scale as in 1:100000 (specifying ppi is recommended)')
 	parser.add_argument('-b', '--bbox', nargs=4, type=float, metavar=('Xmin', 'Ymin', 'Xmax', 'Ymax'), help='Bounding box')
 	parser.add_argument('-a', '--paper', help='Paper format: -a +4 for landscape A4, -a -4 for portrait A4, -a letter for autorotated US Letter')
-	parser.add_argument('-d', '--size', nargs=2, metavar=('W', 'H'), type=int, help='Target dimensions in mm')
-	parser.add_argument('-x', '--size-px', nargs=2, metavar=('W', 'H'), type=int, help='Target dimensions in pixels')
+	parser.add_argument('-d', '--size', nargs=2, metavar=('W', 'H'), type=int, help='Target dimensions in mm (one 0 allowed)')
+	parser.add_argument('-x', '--size-px', nargs=2, metavar=('W', 'H'), type=int, help='Target dimensions in pixels (one 0 allowed)')
+	parser.add_argument('--norotate', action='store_true', default=False, help='Do not swap width and height for bbox')
 	parser.add_argument('-m', '--margin', type=int, help='Amount in mm to reduce paper size')
 	parser.add_argument('-c', '--center', nargs=2, metavar=('X', 'Y'), type=float, help='Center of an image')
 
@@ -207,7 +208,7 @@ if __name__ == "__main__":
 	scale = None
 	size = None
 	bbox = None
-	rotate = False
+	rotate = not options.norotate
 
 	if options.url:
 		parse_url(options.url, options)
@@ -227,8 +228,10 @@ if __name__ == "__main__":
 		portrait = False
 		if options.paper[0] == '-':
 			portrait = True
+			rotate = False
 			options.paper = options.paper[1:]
 		elif options.paper[0] == '+':
+			rotate = False
 			options.paper = options.paper[1:]
 		else:
 			rotate = True
@@ -240,8 +243,8 @@ if __name__ == "__main__":
 	elif options.size:
 		dim_mm = options.size
 	if dim_mm and options.margin:
-		dim_mm[0] = dim_mm[0] - options.margin * 2
-		dim_mm[1] = dim_mm[1] - options.margin * 2
+		dim_mm[0] = max(0, dim_mm[0] - options.margin * 2)
+		dim_mm[1] = max(0, dim_mm[1] - options.margin * 2)
 
 	# ppi and scale factor are the same thing
 	if options.ppi:
@@ -263,6 +266,9 @@ if __name__ == "__main__":
 	elif dim_mm:
 		size = [int(round(dim_mm[0] * ppmm)), int(round(dim_mm[1] * ppmm))]
 
+	if size and size[0] + size[1] <= 0:
+		raise Exception('Both dimensions are less or equal to zero')
+
 	# scale can be specified with zoom or with 1:NNN scale
 	fix_scale = False
 	if options.zoom:
@@ -282,11 +288,9 @@ if __name__ == "__main__":
 	# all calculations are in EPSG:3857 projection (it's easier)
 	if bbox:
 		bbox = transform.forward(mapnik.Box2d(*bbox))
-		if size and size[0] > size[1] and rotate and bbox.maxy - bbox.miny > bbox.maxx - bbox.minx:
-			size = [size[1], size[0]]
 
 	# calculate bbox through center, zoom and target size
-	if not bbox and options.center and size and scale:
+	if not bbox and options.center and size and size[0] > 0 and size[1] > 0 and scale:
 		center = transform.forward(mapnik.Coord(*options.center))
 		w = size[0] * scale / 2
 		h = size[1] * scale / 2
@@ -321,12 +325,19 @@ if __name__ == "__main__":
 			if scale:
 				tscale = scale
 			else:
-				tscale = min((bbox.maxx - bbox.minx) / size[0], (bbox.maxy - bbox.miny) / size[1])
+				tscale = min((bbox.maxx - bbox.minx) / max(size[0], 0.01), (bbox.maxy - bbox.miny) / max(size[1], 0.01))
 			bbox.pad(options.padding * ppmm * tscale)
 
 	# bbox should be specified by this point
 	if not bbox:
 		raise Exception('Bounding box was not specified in any way')
+
+	# rotate image to fit bbox better
+	if rotate and size:
+		portrait = bbox.maxy - bbox.miny > bbox.maxx - bbox.minx
+		# take into consideration zero values, which mean they should be calculated from bbox
+		if (size[0] == 0 or size[0] > size[1]) and portrait:
+			size = [size[1], size[0]]
 
 	# calculate pixel size from bbox and scale
 	if not size:
@@ -334,6 +345,10 @@ if __name__ == "__main__":
 			size = [int(round(abs(bbox.maxx - bbox.minx) / scale)), int(round(abs(bbox.maxy - bbox.miny) / scale))]
 		else:
 			raise Exception('Image dimensions or scale were not specified in any way')
+	elif size[0] == 0:
+		size[0] = int(round(size[1] * (bbox.maxx - bbox.minx) / (bbox.maxy - bbox.miny)))
+	elif size[1] == 0:
+		size[1] = int(round(size[0] / (bbox.maxx - bbox.minx) * (bbox.maxy - bbox.miny)))
 
 	if options.output == '-' or (need_cairo and options.tiles > 1):
 		options.tiles = 1
