@@ -98,6 +98,19 @@ Formats can be `a0-a9`, `letter`, `card` and so on.  The paper orientation depen
 to force landscape or portrait orientation prepend the format with `+` or `-` characters.
 Or don't bother and enter numbers by hand: `-d 150 100` will export a 15×10 postcard map.
 
+### Wait, what's that again, about dimensions?
+
+Dimensions you specify in `--size` (`-d`) and `--size-px` (`-x`) arguments are not exactly width and height
+in that order: they will be swapped if a bounding box would fit better. For example, when you export
+"landscape" bbox and specify `-d 200 400`, the image would be 40 cm wide and 20 cm tall. To prevent this
+behaviour, use `--norotate` option: with it, that image would be 20 cm wide, with the bounding box
+expanded vertically.
+
+When you don't want your bounding box altered, use `0` for one of dimension values. The first one in that
+case is considered a long side length, the second is for shorter side. With `--norotate` option, they
+are width and height respectively. For example, `-x 1024 0 --norotate` would make the resulting image
+1024 pixels wide regardless of bounding box proportions.
+
 ### Print a route
 
 On the image above there is a route. Nik4 cannot parse GPX files or draw anything on top of exported
