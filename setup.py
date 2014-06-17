@@ -5,7 +5,7 @@ setup(
 		version='1.4.0',
 		license='WTFPL',
 		description='Command-line interface to a Mapnik rendering toolkit',
-		long_description=open('README.txt').read(),
+		long_description=open('README.md').read(),
 		url='https://github.com/Zverik/Nik4',
 		author='Ilya Zverev',
 		author_email='zverik@textual.ru',
