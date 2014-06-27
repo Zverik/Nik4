@@ -113,7 +113,6 @@ def parse_url(url, options):
 		m = re.search(r'zoom=([0-9]{1,2})', url, flags=re.IGNORECASE)
 		if m:
 			zoom = int(m.group(1))
-	print lat, lon, zoom
 	if zoom and not options.zoom:
 		options.zoom = zoom
 	if lat and lon and not options.center:
@@ -306,7 +305,7 @@ if __name__ == "__main__":
 		style_path = os.path.dirname(options.style)
 	if options.base:
 		style_path = options.base
-	if options.vars:
+	if 'vars' in options and options.vars is not None:
 		style_xml = xml_vars(style_xml, options.vars)
 
 	# for layer processing we need to create the Map object
@@ -386,6 +385,8 @@ if __name__ == "__main__":
 
 	if need_cairo:
 		if HAS_CAIRO:
+			# fix size: cairo expects points, which are 1.25 less than pixels
+			size = [int(round(size[0] / 1.25)), int(round(size[1] / 1.25))]
 			surface = cairo.SVGSurface(outfile, size[0], size[1]) if fmt == 'svg' else cairo.PDFSurface(outfile, size[0], size[1])
 			mapnik.render(m, surface, scale_factor, 0, 0)
 			surface.finish()

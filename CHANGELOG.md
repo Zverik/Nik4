@@ -1,5 +1,11 @@
 # Nik4 Change History
 
+## 1.5, *master*
+
+* Removed debug output for `--url`.
+* Substitute variables with default values when `--vars` is empty.
+* Convert to points for Cairo output. [#13](https://github.com/Zverik/Nik4/issues/13)
+
 ## 1.4, 4.06.2014
 
 * **Breaking change:** width and height specified in `--size` and `--size-px` are now swapped if they fit bbox better that way. Use `--norotate` to preserve old behaviour (that is, to force `WIDTH HEIGHT` order).
