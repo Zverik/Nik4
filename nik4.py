@@ -349,10 +349,6 @@ if __name__ == "__main__":
 	elif size[1] == 0:
 		size[1] = int(round(size[0] / (bbox.maxx - bbox.minx) * (bbox.maxy - bbox.miny)))
 
-	# fix size: cairo expects points, which are 1.25 less than pixels
-	if need_cairo and HAS_CAIRO:
-		size = [int(round(size[0] / 1.25)), int(round(size[1] / 1.25))]
-
 	if options.output == '-' or (need_cairo and options.tiles > 1):
 		options.tiles = 1
 	if max(size[0], size[1]) / options.tiles > 16384:

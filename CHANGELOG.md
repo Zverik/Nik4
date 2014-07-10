@@ -4,7 +4,6 @@
 
 * Removed debug output for `--url`.
 * Substitute variables with default values when `--vars` is empty.
-* Convert to points for Cairo output. [#13](https://github.com/Zverik/Nik4/issues/13)
 
 ## 1.4, 4.06.2014
 
