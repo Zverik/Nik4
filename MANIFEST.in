@@ -1,3 +1,3 @@
-include CHANGELOG.md
+include *.md
 include *.txt
 
