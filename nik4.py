@@ -195,6 +195,7 @@ if __name__ == "__main__":
 	parser.add_argument('--ozi', type=argparse.FileType('w'), help='Generate ozi map file')
 	parser.add_argument('--wld', type=argparse.FileType('w'), help='Generate world file')
 	parser.add_argument('-t', '--tiles', type=int, choices=range(1, 13), default=1, help='Write N×N tiles, then join using imagemagick')
+	parser.add_argument('--just-tiles', action='store_true', default=False, help='Do not join tiles, instead write ozi/wld file for each')
 	parser.add_argument('-v', '--debug', action='store_true', default=False, help='Display calculated values')
 	parser.add_argument('-f', '--format', dest='fmt', help='Target file format (by default looks at extension)')
 	parser.add_argument('--base', help='Base path for style file, in case it\'s piped to stdin')
@@ -417,18 +418,31 @@ if __name__ == "__main__":
 				for column in range(0, tile_cnt[0]):
 					if options.debug:
 						print 'tile={},{}'.format(row, column)
-					m.zoom_to_box(mapnik.Box2d(bbox.minx + 1.0 * width * scale * column, bbox.maxy - 1.0 * height * scale * row, bbox.minx + 1.0 * width * scale * (column + 1), bbox.maxy - 1.0 * height * scale * (row + 1)))
-					im = mapnik.Image(width if column < tile_cnt[0] - 1 else size[0] - width * (tile_cnt[0] - 1), height if row < tile_cnt[1] - 1 else size[1] - height * (tile_cnt[1] - 1))
+					tile_bbox = mapnik.Box2d(bbox.minx + 1.0 * width * scale * column, bbox.maxy - 1.0 * height * scale * row, bbox.minx + 1.0 * width * scale * (column + 1), bbox.maxy - 1.0 * height * scale * (row + 1))
+					tile_size = [width if column < tile_cnt[0] - 1 else size[0] - width * (tile_cnt[0] - 1), height if row < tile_cnt[1] - 1 else size[1] - height * (tile_cnt[1] - 1)]
+					m.zoom_to_box(tile_bbox)
+					im = mapnik.Image(tile_size[0], tile_size[1])
 					mapnik.render(m, im, scale_factor)
 					tile_name = tmp_tile.format(row, column, options.output)
 					im.save(tile_name, fmt)
-					tile_files.append(tile_name)
-			# join tiles and remove them if joining succeeded
-			import subprocess
-			result = subprocess.call([IM_MONTAGE, '-geometry', '+0+0', '-tile', '{}x{}'.format(tile_cnt[0], tile_cnt[1])] + tile_files + [options.output])
-			if result == 0:
-				for tile in tile_files:
-					os.remove(tile)
+					if options.just_tiles:
+						# write ozi/wld for a tile if needed
+						tile_basename = tile_name + '.' if not '.' in tile_name else tile_name[0:tile_name.rindex('.')+1]
+						if options.ozi:
+							with open(tile_basename + 'ozi', 'w') as f:
+								f.write(prepare_ozi(tile_bbox, tile_size[0], tile_size[1], tile_basename + '.ozi'))
+						if options.wld:
+							with open(tile_basename + 'wld', 'w') as f:
+								f.write(prepare_wld(tile_bbox, tile_size[0], tile_size[1]))
+					else:
+						tile_files.append(tile_name)
+			if not options.just_tiles:
+				# join tiles and remove them if joining succeeded
+				import subprocess
+				result = subprocess.call([IM_MONTAGE, '-geometry', '+0+0', '-tile', '{}x{}'.format(tile_cnt[0], tile_cnt[1])] + tile_files + [options.output])
+				if result == 0:
+					for tile in tile_files:
+						os.remove(tile)
 
 	if options.output == '-':
 		if sys.platform == "win32":

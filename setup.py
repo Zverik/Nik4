@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
 		name='Nik4',
-		version='1.4.1',
+		version='1.5.0',
 		license='WTFPL',
 		description='Command-line interface to a Mapnik rendering toolkit',
 		long_description="""

@@ -1,9 +1,10 @@
 # Nik4 Change History
 
-## 1.5, *master*
+## 1.5, 7.12.2014
 
 * Removed debug output for `--url`.
 * Substitute variables with default values when `--vars` is empty.
+* `--just-tiles` option for keeping tiles instead of merging them, also creates ozi/wld files if needed. [#15](https://github.com/Zverik/Nik4/issues/15)
 
 ## 1.4, 4.06.2014
 
