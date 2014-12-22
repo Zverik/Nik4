@@ -14,6 +14,7 @@ try:
 except ImportError:
 	HAS_CAIRO = False
 
+VERSION = '1.5.1'
 TILE_BUFFER = 128
 IM_MONTAGE = 'montage'
 
@@ -172,7 +173,8 @@ def xml_vars(style, variables):
 	return rstyle
 
 if __name__ == "__main__":
-	parser = argparse.ArgumentParser(description='Tile-aware mapnik image renderer')
+	parser = argparse.ArgumentParser(description='Nik4 {}: Tile-aware mapnik image renderer'.format(VERSION))
+	parser.add_argument('--version', action='version', version='Nik4 {}'.format(VERSION))
 	parser.add_argument('-z', '--zoom', type=float, help='Target zoom level')
 	parser.add_argument('-p', '--ppi', '--dpi', type=float, help='Pixels per inch (alternative to scale)')
 	parser.add_argument('--factor', type=float, help='Scale factor (affects ppi, default=1)', default=1)
