@@ -1,5 +1,10 @@
 # Nik4 Change History
 
+## *master*
+
+* `--version` option.
+* Added `--fonts` option for registering additional fonts. [#16](https://github.com/Zverik/Nik4/issues/16)
+
 ## 1.5, 7.12.2014
 
 * Removed debug output for `--url`.

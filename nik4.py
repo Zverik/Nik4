@@ -172,6 +172,12 @@ def xml_vars(style, variables):
 		rstyle = rstyle + style[last:]
 	return rstyle
 
+def add_fonts(path):
+	if os.path.exists(path):
+		mapnik.register_fonts(path)
+	else:
+		raise Exception('The directory "{p}" does not exists'.format(p=path))
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Nik4 {}: Tile-aware mapnik image renderer'.format(VERSION))
 	parser.add_argument('--version', action='version', version='Nik4 {}'.format(VERSION))
@@ -202,6 +208,7 @@ if __name__ == "__main__":
 	parser.add_argument('-f', '--format', dest='fmt', help='Target file format (by default looks at extension)')
 	parser.add_argument('--base', help='Base path for style file, in case it\'s piped to stdin')
 	parser.add_argument('--vars', nargs='*', help='List of variables (name=value) to substitute in style file (use ${name:default})')
+	parser.add_argument('--fonts', nargs='*', help='List of full path to directories containing fonts')
 	parser.add_argument('style', help='Style file for mapnik')
 	parser.add_argument('output', help='Resulting image file')
 	options = parser.parse_args()
@@ -315,6 +322,11 @@ if __name__ == "__main__":
 	m = mapnik.Map(100, 100) # temporary size, will be changed before output
 	mapnik.load_map_from_string(m, style_xml, False, style_path)
 	m.srs = p3857.params()
+
+	# register non-standard fonts
+	if options.fonts:
+		for f in options.fonts:
+			add_fonts(f)
 
 	# get bbox from layer extents
 	if options.fit:
