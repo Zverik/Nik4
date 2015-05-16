@@ -4,6 +4,7 @@
 
 * `--version` option.
 * Added `--fonts` option for registering additional fonts. [#16](https://github.com/Zverik/Nik4/issues/16)
+* Fixed `--center` with `--scale` error. [#18](https://github.com/Zverik/Nik4/issues/18)
 
 ## 1.5, 7.12.2014
 

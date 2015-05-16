@@ -14,7 +14,7 @@ try:
 except ImportError:
 	HAS_CAIRO = False
 
-VERSION = '1.5.1'
+VERSION = '1.5.2'
 TILE_BUFFER = 128
 IM_MONTAGE = 'montage'
 
@@ -286,7 +286,7 @@ if __name__ == "__main__":
 		scale = options.scale * 0.00028 / scale_factor
 		# Now we have to divide by cos(lat), but we might not know latitude at this point
 		if options.center:
-			scale = scale / math.cos(math.radians(center.y))
+			scale = scale / math.cos(math.radians(options.center[1]))
 		elif options.bbox:
 			scale = scale / math.cos(math.radians((options.bbox[3] + options.bbox[1]) / 2))
 		else:
