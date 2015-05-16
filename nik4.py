@@ -132,9 +132,9 @@ def get_paper_size(name):
 	if m:
 		return [math.floor(1000 / 2**((int(m.group(1)) - 1) / 2.0) + 0.2), math.floor(1000 / 2**(int(m.group(1)) / 2.0) + 0.2)]
 	# German extensions
-	if name == '2a0':
-		return [2378, 1682]
 	if name == '4a0':
+		return [2378, 1682]
+	if name == '2a0':
 		return [1682, 1189]
 	# US Legal
 	if re.match(r'^leg', name):
