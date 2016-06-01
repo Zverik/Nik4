@@ -14,7 +14,7 @@ try:
 except ImportError:
 	HAS_CAIRO = False
 
-VERSION = '1.5.2'
+VERSION = '1.6'
 TILE_BUFFER = 128
 IM_MONTAGE = 'montage'
 
@@ -376,12 +376,12 @@ if __name__ == "__main__":
 		select_layers(m, options.add_layers.split(',') if options.add_layers else [], options.hide_layers.split(',') if options.hide_layers else [])
 
 	if options.debug:
-		print 'scale={}'.format(scale)
-		print 'scale_factor={}'.format(scale_factor)
-		print 'size={},{}'.format(size[0], size[1])
-		print 'bbox={}'.format(bbox)
-		print 'bbox_wgs84={}'.format(transform.backward(bbox) if bbox else None)
-		print 'layers=' + ','.join([l.name for l in m.layers if l.active])
+		print('scale={}'.format(scale))
+		print('scale_factor={}'.format(scale_factor))
+		print('size={},{}'.format(size[0], size[1]))
+		print('bbox={}'.format(bbox))
+		print('bbox_wgs84={}'.format(transform.backward(bbox) if bbox else None))
+		print('layers=' + ','.join([l.name for l in m.layers if l.active]))
 
 	# generate metadata
 	if options.ozi:
@@ -424,14 +424,14 @@ if __name__ == "__main__":
 			m.buffer_size = TILE_BUFFER
 			tile_cnt = [int(math.ceil(1.0 * size[0] / width)), int(math.ceil(1.0 * size[1] / height))]
 			if options.debug:
-				print 'tile_count={},{}'.format(tile_cnt[0], tile_cnt[1])
-				print 'tile_size={},{}'.format(width, height)
+				print('tile_count={},{}'.format(tile_cnt[0], tile_cnt[1]))
+				print('tile_size={},{}'.format(width, height))
 			tmp_tile = '{:02d}_{:02d}_{}'
 			tile_files = []
 			for row in range(0, tile_cnt[1]):
 				for column in range(0, tile_cnt[0]):
 					if options.debug:
-						print 'tile={},{}'.format(row, column)
+						print('tile={},{}'.format(row, column))
 					tile_bbox = mapnik.Box2d(bbox.minx + 1.0 * width * scale * column, bbox.maxy - 1.0 * height * scale * row, bbox.minx + 1.0 * width * scale * (column + 1), bbox.maxy - 1.0 * height * scale * (row + 1))
 					tile_size = [width if column < tile_cnt[0] - 1 else size[0] - width * (tile_cnt[0] - 1), height if row < tile_cnt[1] - 1 else size[1] - height * (tile_cnt[1] - 1)]
 					m.zoom_to_box(tile_bbox)
@@ -465,5 +465,5 @@ if __name__ == "__main__":
 			msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
 
 		outfile.seek(0)
-		print outfile.read()
+		print(outfile.read())
 		outfile.close()

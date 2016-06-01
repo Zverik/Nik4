@@ -1,11 +1,12 @@
 # Nik4 Change History
 
-## *master*
+## 1.6, 1.06.2016
 
 * `--version` option.
 * Added `--fonts` option for registering additional fonts. [#16](https://github.com/Zverik/Nik4/issues/16)
 * Fixed `--center` with `--scale` error. [#18](https://github.com/Zverik/Nik4/issues/18)
 * Swapped sizes 4A0 and 2A0. [#17](https://github.com/Zverik/Nik4/issues/17)
+* Support Python 3. [#23](https://github.com/Zverik/Nik4/issues/23)
 
 ## 1.5, 7.12.2014
 
