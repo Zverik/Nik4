@@ -63,6 +63,10 @@ use `--wld` option. You can convert png+wld to geotiff with GDAL:
 
     gdal_translate -of GTiff -a_srs epsg:4326 image.png image.tif
 
+The OziExplorer georefencing files exported by Nik4 currently only support EPSG:3857 (the coordinate reference system used by most slippy maps including [OpenStreetMap Carto](https://github.com/gravitystorm/openstreetmap-carto) and Google Maps). For most people, this won't be an issue.
+
+The `.wld` files exported by Nik4 support alternative coordinate reference systems such as EPSG:27700 (British National Grid). Nik4 will automatically use the SRS specified in your Mapnik XML stylesheet and the coordinates contained in the `.wld` file will match this. However, `.wld` files do not contain any information about the coordinate reference system that has been used so when importing the file into other software such as QGIS, you will need to specify this.
+
 ### Make a BIG raster image
 
 You would likely encounter out of memory error while trying to generate 16311×10709 image from the last
