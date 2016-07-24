@@ -18,16 +18,12 @@ VERSION = '1.6'
 TILE_BUFFER = 128
 IM_MONTAGE = 'montage'
 
-p3857 = mapnik.Projection('+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over')
-p4326 = mapnik.Projection('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
-transform = mapnik.ProjTransform(p4326, p3857)
-
 def layer_bbox(m, names, bbox=None):
 	"""Calculate extent of given layers and bbox"""
 	for layer in (l for l in m.layers if l.name in names):
 		# it may as well be a GPX layer in WGS84
 		p = mapnik.Projection(layer.srs)
-		lbbox = layer.envelope().inverse(p).forward(p3857)
+		lbbox = layer.envelope().inverse(p).forward(proj_map)
 		if bbox:
 			bbox.expand_to_include(lbbox)
 		else:
@@ -292,19 +288,6 @@ if __name__ == "__main__":
 		else:
 			fix_scale = True
 
-	if options.bbox:
-		bbox = options.bbox
-	# all calculations are in EPSG:3857 projection (it's easier)
-	if bbox:
-		bbox = transform.forward(mapnik.Box2d(*bbox))
-
-	# calculate bbox through center, zoom and target size
-	if not bbox and options.center and size and size[0] > 0 and size[1] > 0 and scale:
-		center = transform.forward(mapnik.Coord(*options.center))
-		w = size[0] * scale / 2
-		h = size[1] * scale / 2
-		bbox = mapnik.Box2d(center.x-w, center.y-h, center.x+w, center.y+h)
-
 	# reading style xml into memory for preprocessing
 	if options.style == '-':
 		style_xml = sys.stdin.read()
@@ -318,10 +301,25 @@ if __name__ == "__main__":
 	if 'vars' in options and options.vars is not None:
 		style_xml = xml_vars(style_xml, options.vars)
 
-	# for layer processing we need to create the Map object
+	# create the Map object
 	m = mapnik.Map(100, 100) # temporary size, will be changed before output
 	mapnik.load_map_from_string(m, style_xml, False, style_path)
-	m.srs = p3857.params()
+        proj_map = mapnik.Projection(m.srs)
+        proj_4326 = mapnik.Projection('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
+        transform = mapnik.ProjTransform(proj_4326, proj_map)
+        
+        if options.bbox:
+		bbox = options.bbox
+	# all calculations are in map projection rather than lat/lon (it's easier)
+	if bbox:
+		bbox = transform.forward(mapnik.Box2d(*bbox))
+
+	# calculate bbox through center, zoom and target size
+	if not bbox and options.center and size and size[0] > 0 and size[1] > 0 and scale:
+		center = transform.forward(mapnik.Coord(*options.center))
+		w = size[0] * scale / 2
+		h = size[1] * scale / 2
+		bbox = mapnik.Box2d(center.x-w, center.y-h, center.x+w, center.y+h)
 
 	# register non-standard fonts
 	if options.fonts:
