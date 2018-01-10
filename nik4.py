@@ -18,16 +18,18 @@ VERSION = '1.6'
 TILE_BUFFER = 128
 IM_MONTAGE = 'montage'
 
-p3857 = mapnik.Projection('+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over')
-p4326 = mapnik.Projection('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
-transform = mapnik.ProjTransform(p4326, p3857)
+proj_target = mapnik.Projection('+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over')
+proj_lonlat = mapnik.Projection('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
+proj_web_merc = mapnik.Projection('+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over')
+transform = mapnik.ProjTransform(proj_lonlat, proj_target)
+transform_lonlat_webmerc = mapnik.ProjTransform(proj_lonlat, proj_web_merc)
 
 def layer_bbox(m, names, bbox=None):
 	"""Calculate extent of given layers and bbox"""
 	for layer in (l for l in m.layers if l.name in names):
 		# it may as well be a GPX layer in WGS84
 		p = mapnik.Projection(layer.srs)
-		lbbox = layer.envelope().inverse(p).forward(p3857)
+		lbbox = layer.envelope().inverse(p).forward(proj_target)
 		if bbox:
 			bbox.expand_to_include(lbbox)
 		else:
@@ -178,6 +180,13 @@ def add_fonts(path):
 	else:
 		raise Exception('The directory "{p}" does not exists'.format(p=path))
 
+def correct_scale(bbox_web_merc, bbox_target):
+	# correct scale if output projection is not EPSG:3857
+	x_dist_merc = bbox_web_merc.maxx - bbox_web_merc.minx
+	x_dist_target = bbox.maxx - bbox.minx
+	return scale * (x_dist_target / x_dist_merc)
+
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Nik4 {}: Tile-aware mapnik image renderer'.format(VERSION))
 	parser.add_argument('--version', action='version', version='Nik4 {}'.format(VERSION))
@@ -198,6 +207,8 @@ if __name__ == "__main__":
 	parser.add_argument('--layers', help='Map layers to render, comma-separated')
 	parser.add_argument('--add-layers', help='Map layers to include, comma-separated')
 	parser.add_argument('--hide-layers', help='Map layers to hide, comma-separated')
+
+	parser.add_argument('-P', '--projection', help='EPSG code as EPSG:1234 or Proj4 string', default='+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over')
 
 	parser.add_argument('--url', help='URL of a map to center on')
 	parser.add_argument('--ozi', type=argparse.FileType('w'), help='Generate ozi map file')
@@ -231,6 +242,13 @@ if __name__ == "__main__":
 		fmt = 'png256'
 	
 	need_cairo = fmt in ['svg', 'pdf']
+
+	# output projection
+	if options.projection.lower().startswith('epsg:'):
+		proj_target = mapnik.Projection('+init={}'.format(options.projection.lower()))
+	else:
+		proj_target = mapnik.Projection(options.projection.lower())
+	transform = mapnik.ProjTransform(proj_lonlat, proj_target)
 	
 	# get image size in millimeters
 	if options.paper:
@@ -278,6 +296,9 @@ if __name__ == "__main__":
 	if size and size[0] + size[1] <= 0:
 		raise Exception('Both dimensions are less or equal to zero')
 
+	if options.bbox:
+		bbox = options.bbox
+
 	# scale can be specified with zoom or with 1:NNN scale
 	fix_scale = False
 	if options.zoom:
@@ -285,6 +306,7 @@ if __name__ == "__main__":
 	elif options.scale:
 		scale = options.scale * 0.00028 / scale_factor
 		# Now we have to divide by cos(lat), but we might not know latitude at this point
+		#TODO division should only happen for EPSG:3857 or not at all
 		if options.center:
 			scale = scale / math.cos(math.radians(options.center[1]))
 		elif options.bbox:
@@ -292,14 +314,24 @@ if __name__ == "__main__":
 		else:
 			fix_scale = True
 
-	if options.bbox:
-		bbox = options.bbox
 	# all calculations are in EPSG:3857 projection (it's easier)
 	if bbox:
 		bbox = transform.forward(mapnik.Box2d(*bbox))
+		bbox_web_merc = transform_lonlat_webmerc.forward(mapnik.Box2d(*(options.bbox)))
+		scale = correct_scale(bbox_web_merc, bbox)
 
 	# calculate bbox through center, zoom and target size
 	if not bbox and options.center and size and size[0] > 0 and size[1] > 0 and scale:
+		# We don't know over which latitude range the bounding box spans, so we
+		# first do everything in Web Mercator.
+		center = transform_lonlat_webmerc.forward(mapnik.Coord(*options.center))
+		w = size[0] * scale / 2
+		h = size[1] * scale / 2
+		bbox_web_merc = mapnik.Box2d(center.x-w, center.y-h, center.x+w, center.y+h)
+		bbox = transform_lonlat_webmerc.inverse(bbox_web_merc)
+		bbox = transform.forward(bbox)
+		# now correct the scale
+		scale = correct_scale(bbox_web_merc, bbox)
 		center = transform.forward(mapnik.Coord(*options.center))
 		w = size[0] * scale / 2
 		h = size[1] * scale / 2
@@ -321,7 +353,7 @@ if __name__ == "__main__":
 	# for layer processing we need to create the Map object
 	m = mapnik.Map(100, 100) # temporary size, will be changed before output
 	mapnik.load_map_from_string(m, style_xml, False, style_path)
-	m.srs = p3857.params()
+	m.srs = proj_target.params()
 
 	# register non-standard fonts
 	if options.fonts:
@@ -334,6 +366,8 @@ if __name__ == "__main__":
 		# here's where we can fix scale, no new bboxes below
 		if bbox and fix_scale:
 			scale = scale / math.cos(math.radians(transform.backward(bbox.center()).y))
+			bbox_web_merc = transform_lonlat_webmerc.forward(transform.inverse(layer_bbox))
+			scale = correct_scale(bbox_web_merc, bbox)
 		# expand bbox with padding in mm
 		if bbox and options.padding and (scale or size):
 			if scale:
