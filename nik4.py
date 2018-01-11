@@ -328,7 +328,7 @@ if __name__ == "__main__":
 		w = size[0] * scale / 2
 		h = size[1] * scale / 2
 		bbox_web_merc = mapnik.Box2d(center.x-w, center.y-h, center.x+w, center.y+h)
-		bbox = transform_lonlat_webmerc.inverse(bbox_web_merc)
+		bbox = transform_lonlat_webmerc.backward(bbox_web_merc)
 		bbox = transform.forward(bbox)
 		# now correct the scale
 		scale = correct_scale(bbox_web_merc, bbox)
@@ -366,7 +366,7 @@ if __name__ == "__main__":
 		# here's where we can fix scale, no new bboxes below
 		if bbox and fix_scale:
 			scale = scale / math.cos(math.radians(transform.backward(bbox.center()).y))
-			bbox_web_merc = transform_lonlat_webmerc.forward(transform.inverse(layer_bbox))
+			bbox_web_merc = transform_lonlat_webmerc.forward(transform.backward(layer_bbox))
 			scale = correct_scale(bbox_web_merc, bbox)
 		# expand bbox with padding in mm
 		if bbox and options.padding and (scale or size):
