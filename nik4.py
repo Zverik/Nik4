@@ -28,8 +28,9 @@ def layer_bbox(m, names, bbox=None):
 	"""Calculate extent of given layers and bbox"""
 	for layer in (l for l in m.layers if l.name in names):
 		# it may as well be a GPX layer in WGS84
-		p = mapnik.Projection(layer.srs)
-		lbbox = layer.envelope().inverse(p).forward(proj_target)
+		layer_proj = mapnik.Projection(layer.srs)
+		box_trans = mapnik.ProjTransform(layer_proj, proj_target)
+		lbbox = box_trans.forward(mapnik.Box2d.from_string('995585 6291591 998380 6293955'))
 		if bbox:
 			bbox.expand_to_include(lbbox)
 		else:
@@ -366,8 +367,8 @@ if __name__ == "__main__":
 		# here's where we can fix scale, no new bboxes below
 		if bbox and fix_scale:
 			scale = scale / math.cos(math.radians(transform.backward(bbox.center()).y))
-			bbox_web_merc = transform_lonlat_webmerc.forward(transform.backward(layer_bbox))
-			scale = correct_scale(bbox_web_merc, bbox)
+		bbox_web_merc = transform_lonlat_webmerc.forward(transform.backward(bbox))
+		scale = correct_scale(bbox_web_merc, bbox)
 		# expand bbox with padding in mm
 		if bbox and options.padding and (scale or size):
 			if scale:
