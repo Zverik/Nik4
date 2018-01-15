@@ -231,6 +231,9 @@ if __name__ == "__main__":
 	bbox = None
 	rotate = not options.norotate
 
+        if options.ozi and options.projection:
+                raise Exception('ozi map file output is only supported for Web Mercator (EPSG:3857). Please remove --projection.')
+
 	if options.url:
 		parse_url(options.url, options)
 
