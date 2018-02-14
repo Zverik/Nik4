@@ -17,10 +17,12 @@ except ImportError:
 VERSION = '1.6'
 TILE_BUFFER = 128
 IM_MONTAGE = 'montage'
+EPSG_4326 = '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'
+EPSG_3857 = '+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over'
 
-proj_target = mapnik.Projection('+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over')
-proj_lonlat = mapnik.Projection('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
-proj_web_merc = mapnik.Projection('+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over')
+proj_target = mapnik.Projection(EPSG_3857)
+proj_lonlat = mapnik.Projection(EPSG_4326)
+proj_web_merc = mapnik.Projection(EPSG_3857)
 transform = mapnik.ProjTransform(proj_lonlat, proj_target)
 transform_lonlat_webmerc = mapnik.ProjTransform(proj_lonlat, proj_web_merc)
 
@@ -209,7 +211,7 @@ if __name__ == "__main__":
 	parser.add_argument('--add-layers', help='Map layers to include, comma-separated')
 	parser.add_argument('--hide-layers', help='Map layers to hide, comma-separated')
 
-	parser.add_argument('-P', '--projection', help='EPSG code as EPSG:1234 or Proj4 string', default='+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over')
+	parser.add_argument('-P', '--projection', help='EPSG code as EPSG:1234 or Proj4 string', default=EPSG_3857)
 
 	parser.add_argument('--url', help='URL of a map to center on')
 	parser.add_argument('--ozi', type=argparse.FileType('w'), help='Generate ozi map file')
