@@ -209,7 +209,7 @@ if __name__ == "__main__":
 	parser.add_argument('--add-layers', help='Map layers to include, comma-separated')
 	parser.add_argument('--hide-layers', help='Map layers to hide, comma-separated')
 
-	parser.add_argument('-P', '--projection', help='EPSG code as EPSG:1234 or Proj4 string', default=EPSG_3857)
+        parser.add_argument('-P', '--projection', help='EPSG code as 1234 (without prefix "EPSG:" or Proj4 string', default=EPSG_3857)
 
 	parser.add_argument('--url', help='URL of a map to center on')
 	parser.add_argument('--ozi', type=argparse.FileType('w'), help='Generate ozi map file')
@@ -248,12 +248,12 @@ if __name__ == "__main__":
 	need_cairo = fmt in ['svg', 'pdf']
 
 	# output projection
-	if options.projection.lower().startswith('epsg:'):
-		proj_target = mapnik.Projection('+init={}'.format(options.projection.lower()))
+	if options.projection.isdigit():
+		proj_target = mapnik.Projection('+init=epsg:{}'.format(options.projection))
 	else:
-		proj_target = mapnik.Projection(options.projection.lower())
+		proj_target = mapnik.Projection(options.projection)
 	transform = mapnik.ProjTransform(proj_lonlat, proj_target)
-	
+
 	# get image size in millimeters
 	if options.paper:
 		portrait = False
