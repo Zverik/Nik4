@@ -30,7 +30,7 @@ def layer_bbox(m, names, bbox=None):
 		# it may as well be a GPX layer in WGS84
 		layer_proj = mapnik.Projection(layer.srs)
 		box_trans = mapnik.ProjTransform(layer_proj, proj_target)
-		lbbox = box_trans.forward(mapnik.Box2d.from_string('995585 6291591 998380 6293955'))
+		lbbox = box_trans.forward(layer.envelope())
 		if bbox:
 			bbox.expand_to_include(lbbox)
 		else:
