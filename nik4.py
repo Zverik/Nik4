@@ -209,7 +209,7 @@ if __name__ == "__main__":
     parser.add_argument('--add-layers', help='Map layers to include, comma-separated')
     parser.add_argument('--hide-layers', help='Map layers to hide, comma-separated')
 
-        parser.add_argument('-P', '--projection', help='EPSG code as 1234 (without prefix "EPSG:" or Proj4 string', default=EPSG_3857)
+    parser.add_argument('-P', '--projection', help='EPSG code as 1234 (without prefix "EPSG:" or Proj4 string', default=EPSG_3857)
 
     parser.add_argument('--url', help='URL of a map to center on')
     parser.add_argument('--ozi', type=argparse.FileType('w'), help='Generate ozi map file')
@@ -231,8 +231,8 @@ if __name__ == "__main__":
     bbox = None
     rotate = not options.norotate
 
-        if options.ozi and options.projection.lower() != 'epsg:3857' and options.projection != EPSG_3857:
-                raise Exception('ozi map file output is only supported for Web Mercator (EPSG:3857). Please remove --projection.')
+    if options.ozi and options.projection.lower() != 'epsg:3857' and options.projection != EPSG_3857:
+        raise Exception('ozi map file output is only supported for Web Mercator (EPSG:3857). Please remove --projection.')
 
     if options.url:
         parse_url(options.url, options)
@@ -244,7 +244,7 @@ if __name__ == "__main__":
         fmt = options.output.split('.')[-1].lower()
     else:
         fmt = 'png256'
-    
+
     need_cairo = fmt in ['svg', 'pdf']
 
     # output projection
@@ -284,7 +284,7 @@ if __name__ == "__main__":
     else:
         scale_factor = options.factor
         ppmm = 90.7 / 25.4 * scale_factor
-    
+
     # svg / pdf can be scaled only in cairo mode
     if scale_factor != 1 and need_cairo and not HAS_CAIRO:
         sys.stderr.write('Warning: install pycairo for using --factor or --ppi')
