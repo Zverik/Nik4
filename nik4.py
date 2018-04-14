@@ -12,6 +12,7 @@ import re
 import argparse
 import math
 import tempfile
+import logging
 
 try:
     import cairo
@@ -31,7 +32,7 @@ proj_web_merc = mapnik.Projection(EPSG_3857)
 transform_lonlat_webmerc = mapnik.ProjTransform(proj_lonlat, proj_web_merc)
 
 
-def layer_bbox(m, names, bbox=None):
+def layer_bbox(m, names, proj_target, bbox=None):
     """Calculate extent of given layers and bbox"""
     for layer in (l for l in m.layers if l.name in names):
         # it may as well be a GPX layer in WGS84
@@ -60,7 +61,7 @@ def select_layers(m, enable, disable):
             l.active = False
 
 
-def prepare_ozi(mbbox, mwidth, mheight, name):
+def prepare_ozi(mbbox, mwidth, mheight, name, transform):
     """Create georeferencing file for OziExplorer"""
     def deg(value, is_lon):
         degrees = math.floor(abs(value))
@@ -222,72 +223,14 @@ def add_fonts(path):
         raise Exception('The directory "{p}" does not exists'.format(p=path))
 
 
-def correct_scale(bbox_web_merc, bbox_target):
+def correct_scale(bbox, scale, bbox_web_merc, bbox_target):
     # correct scale if output projection is not EPSG:3857
     x_dist_merc = bbox_web_merc.maxx - bbox_web_merc.minx
     x_dist_target = bbox.maxx - bbox.minx
     return scale * (x_dist_target / x_dist_merc)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description='Nik4 {}: Tile-aware mapnik image renderer'.format(VERSION))
-    parser.add_argument('--version', action='version', version='Nik4 {}'.format(VERSION))
-    parser.add_argument('-z', '--zoom', type=float, help='Target zoom level')
-    parser.add_argument('-p', '--ppi', '--dpi', type=float,
-                        help='Pixels per inch (alternative to scale)')
-    parser.add_argument('--factor', type=float, default=1,
-                        help='Scale factor (affects ppi, default=1)')
-    parser.add_argument('-s', '--scale', type=float,
-                        help='Scale as in 1:100000 (specifying ppi is recommended)')
-    parser.add_argument('-b', '--bbox', nargs=4, type=float,
-                        metavar=('Xmin', 'Ymin', 'Xmax', 'Ymax'), help='Bounding box')
-    parser.add_argument('-a', '--paper',
-                        help='Paper format: -a +4 for landscape A4, -a -4 for portrait A4, ' +
-                        '-a letter for autorotated US Letter')
-    parser.add_argument('-d', '--size', nargs=2, metavar=('W', 'H'), type=int,
-                        help='Target dimensions in mm (one 0 allowed)')
-    parser.add_argument('-x', '--size-px', nargs=2, metavar=('W', 'H'), type=int,
-                        help='Target dimensions in pixels (one 0 allowed)')
-    parser.add_argument('--norotate', action='store_true', default=False,
-                        help='Do not swap width and height for bbox')
-    parser.add_argument('-m', '--margin', type=int,
-                        help='Amount in mm to reduce paper size')
-    parser.add_argument('-c', '--center', nargs=2, metavar=('X', 'Y'), type=float,
-                        help='Center of an image')
-
-    parser.add_argument('--fit', help='Fit layers in the map, comma-separated')
-    parser.add_argument('--padding', type=int, default=5,
-                        help='Margin for layers in --fit (default=5), mm')
-    parser.add_argument('--layers', help='Map layers to render, comma-separated')
-    parser.add_argument('--add-layers', help='Map layers to include, comma-separated')
-    parser.add_argument('--hide-layers', help='Map layers to hide, comma-separated')
-
-    parser.add_argument('-P', '--projection', default=EPSG_3857,
-                        help='EPSG code as 1234 (without prefix "EPSG:" or Proj4 string')
-
-    parser.add_argument('--url', help='URL of a map to center on')
-    parser.add_argument('--ozi', type=argparse.FileType('w'), help='Generate ozi map file')
-    parser.add_argument('--wld', type=argparse.FileType('w'), help='Generate world file')
-    parser.add_argument('-t', '--tiles', type=int, choices=range(1, 13), default=1,
-                        help='Write N×N tiles, then join using imagemagick')
-    parser.add_argument('--just-tiles', action='store_true', default=False,
-                        help='Do not join tiles, instead write ozi/wld file for each')
-    parser.add_argument('-v', '--debug', action='store_true', default=False,
-                        help='Display calculated values')
-    parser.add_argument('-f', '--format', dest='fmt',
-                        help='Target file format (by default looks at extension)')
-    parser.add_argument('--base',
-                        help='Base path for style file, in case it\'s piped to stdin')
-    parser.add_argument('--vars', nargs='*',
-                        help='List of variables (name=value) to substitute in ' +
-                        'style file (use ${name:default})')
-    parser.add_argument('--fonts', nargs='*',
-                        help='List of full path to directories containing fonts')
-    parser.add_argument('style', help='Style file for mapnik')
-    parser.add_argument('output', help='Resulting image file')
-    options = parser.parse_args()
-
+def run(options):
     dim_mm = None
     scale = None
     size = None
@@ -387,7 +330,7 @@ if __name__ == "__main__":
     if bbox:
         bbox = transform.forward(mapnik.Box2d(*bbox))
         bbox_web_merc = transform_lonlat_webmerc.forward(mapnik.Box2d(*(options.bbox)))
-        scale = correct_scale(bbox_web_merc, bbox)
+        scale = correct_scale(bbox, scale, bbox_web_merc, bbox)
 
     # calculate bbox through center, zoom and target size
     if not bbox and options.center and size and size[0] > 0 and size[1] > 0 and scale:
@@ -400,7 +343,7 @@ if __name__ == "__main__":
         bbox = transform_lonlat_webmerc.backward(bbox_web_merc)
         bbox = transform.forward(bbox)
         # now correct the scale
-        scale = correct_scale(bbox_web_merc, bbox)
+        scale = correct_scale(bbox, scale, bbox_web_merc, bbox)
         center = transform.forward(mapnik.Coord(*options.center))
         w = size[0] * scale / 2
         h = size[1] * scale / 2
@@ -431,12 +374,12 @@ if __name__ == "__main__":
 
     # get bbox from layer extents
     if options.fit:
-        bbox = layer_bbox(m, options.fit.split(','), bbox)
+        bbox = layer_bbox(m, options.fit.split(','), proj_target, bbox)
         # here's where we can fix scale, no new bboxes below
         if bbox and fix_scale:
             scale = scale / math.cos(math.radians(transform.backward(bbox.center()).y))
         bbox_web_merc = transform_lonlat_webmerc.forward(transform.backward(bbox))
-        scale = correct_scale(bbox_web_merc, bbox)
+        scale = correct_scale(bbox, scale, bbox_web_merc, bbox)
         # expand bbox with padding in mm
         if bbox and options.padding and (scale or size):
             if scale:
@@ -482,17 +425,16 @@ if __name__ == "__main__":
         select_layers(m, options.add_layers.split(',') if options.add_layers else [],
                       options.hide_layers.split(',') if options.hide_layers else [])
 
-    if options.debug:
-        print('scale={}'.format(scale))
-        print('scale_factor={}'.format(scale_factor))
-        print('size={},{}'.format(size[0], size[1]))
-        print('bbox={}'.format(bbox))
-        print('bbox_wgs84={}'.format(transform.backward(bbox) if bbox else None))
-        print('layers=' + ','.join([l.name for l in m.layers if l.active]))
+    logging.debug('scale=%s', scale)
+    logging.debug('scale_factor=%s', scale_factor)
+    logging.debug('size=%s,%s', size[0], size[1])
+    logging.debug('bbox=%s', bbox)
+    logging.debug('bbox_wgs84=%s', transform.backward(bbox) if bbox else None)
+    logging.debug('layers=%s', ','.join([l.name for l in m.layers if l.active]))
 
     # generate metadata
     if options.ozi:
-        options.ozi.write(prepare_ozi(bbox, size[0], size[1], options.output))
+        options.ozi.write(prepare_ozi(bbox, size[0], size[1], options.output, transform))
     if options.wld:
         options.wld.write(prepare_wld(bbox, size[0], size[1]))
 
@@ -534,15 +476,13 @@ if __name__ == "__main__":
             m.buffer_size = TILE_BUFFER
             tile_cnt = [int(math.ceil(1.0 * size[0] / width)),
                         int(math.ceil(1.0 * size[1] / height))]
-            if options.debug:
-                print('tile_count={},{}'.format(tile_cnt[0], tile_cnt[1]))
-                print('tile_size={},{}'.format(width, height))
+            logging.debug('tile_count=%s %s', tile_cnt[0], tile_cnt[1])
+            logging.debug('tile_size=%s,%s', width, height)
             tmp_tile = '{:02d}_{:02d}_{}'
             tile_files = []
             for row in range(0, tile_cnt[1]):
                 for column in range(0, tile_cnt[0]):
-                    if options.debug:
-                        print('tile={},{}'.format(row, column))
+                    logging.debug('tile=%s,%s', row, column)
                     tile_bbox = mapnik.Box2d(
                         bbox.minx + 1.0 * width * scale * column,
                         bbox.maxy - 1.0 * height * scale * row,
@@ -565,7 +505,7 @@ if __name__ == "__main__":
                         if options.ozi:
                             with open(tile_basename + 'ozi', 'w') as f:
                                 f.write(prepare_ozi(tile_bbox, tile_size[0], tile_size[1],
-                                                    tile_basename + '.ozi'))
+                                                    tile_basename + '.ozi', transform))
                         if options.wld:
                             with open(tile_basename + 'wld', 'w') as f:
                                 f.write(prepare_wld(tile_bbox, tile_size[0], tile_size[1]))
@@ -589,5 +529,72 @@ if __name__ == "__main__":
             msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
 
         outfile.seek(0)
-        print(outfile.read())
+        sys.stdout.write(outfile.read())
         outfile.close()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description='Nik4 {}: Tile-aware mapnik image renderer'.format(VERSION))
+    parser.add_argument('--version', action='version', version='Nik4 {}'.format(VERSION))
+    parser.add_argument('-z', '--zoom', type=float, help='Target zoom level')
+    parser.add_argument('-p', '--ppi', '--dpi', type=float,
+                        help='Pixels per inch (alternative to scale)')
+    parser.add_argument('--factor', type=float, default=1,
+                        help='Scale factor (affects ppi, default=1)')
+    parser.add_argument('-s', '--scale', type=float,
+                        help='Scale as in 1:100000 (specifying ppi is recommended)')
+    parser.add_argument('-b', '--bbox', nargs=4, type=float,
+                        metavar=('Xmin', 'Ymin', 'Xmax', 'Ymax'), help='Bounding box')
+    parser.add_argument('-a', '--paper',
+                        help='Paper format: -a +4 for landscape A4, -a -4 for portrait A4, ' +
+                        '-a letter for autorotated US Letter')
+    parser.add_argument('-d', '--size', nargs=2, metavar=('W', 'H'), type=int,
+                        help='Target dimensions in mm (one 0 allowed)')
+    parser.add_argument('-x', '--size-px', nargs=2, metavar=('W', 'H'), type=int,
+                        help='Target dimensions in pixels (one 0 allowed)')
+    parser.add_argument('--norotate', action='store_true', default=False,
+                        help='Do not swap width and height for bbox')
+    parser.add_argument('-m', '--margin', type=int,
+                        help='Amount in mm to reduce paper size')
+    parser.add_argument('-c', '--center', nargs=2, metavar=('X', 'Y'), type=float,
+                        help='Center of an image')
+
+    parser.add_argument('--fit', help='Fit layers in the map, comma-separated')
+    parser.add_argument('--padding', type=int, default=5,
+                        help='Margin for layers in --fit (default=5), mm')
+    parser.add_argument('--layers', help='Map layers to render, comma-separated')
+    parser.add_argument('--add-layers', help='Map layers to include, comma-separated')
+    parser.add_argument('--hide-layers', help='Map layers to hide, comma-separated')
+
+    parser.add_argument('-P', '--projection', default=EPSG_3857,
+                        help='EPSG code as 1234 (without prefix "EPSG:" or Proj4 string')
+
+    parser.add_argument('--url', help='URL of a map to center on')
+    parser.add_argument('--ozi', type=argparse.FileType('w'), help='Generate ozi map file')
+    parser.add_argument('--wld', type=argparse.FileType('w'), help='Generate world file')
+    parser.add_argument('-t', '--tiles', type=int, choices=range(1, 13), default=1,
+                        help='Write N×N tiles, then join using imagemagick')
+    parser.add_argument('--just-tiles', action='store_true', default=False,
+                        help='Do not join tiles, instead write ozi/wld file for each')
+    parser.add_argument('-v', '--debug', action='store_true', default=False,
+                        help='Display calculated values')
+    parser.add_argument('-f', '--format', dest='fmt',
+                        help='Target file format (by default looks at extension)')
+    parser.add_argument('--base',
+                        help='Base path for style file, in case it\'s piped to stdin')
+    parser.add_argument('--vars', nargs='*',
+                        help='List of variables (name=value) to substitute in ' +
+                        'style file (use ${name:default})')
+    parser.add_argument('--fonts', nargs='*',
+                        help='List of full path to directories containing fonts')
+    parser.add_argument('style', help='Style file for mapnik')
+    parser.add_argument('output', help='Resulting image file')
+    options = parser.parse_args()
+
+    if options.debug:
+        log_level = logging.DEBUG
+    else:
+        log_level = logging.INFO
+    logging.basicConfig(level=log_level, format='%(asctime)s %(message)s', datefmt='%H:%M:%S')
+    run(options)
