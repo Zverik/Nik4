@@ -330,7 +330,8 @@ def run(options):
     if bbox:
         bbox = transform.forward(mapnik.Box2d(*bbox))
         bbox_web_merc = transform_lonlat_webmerc.forward(mapnik.Box2d(*(options.bbox)))
-        scale = correct_scale(bbox, scale, bbox_web_merc, bbox)
+        if scale:
+            scale = correct_scale(bbox, scale, bbox_web_merc, bbox)
 
     # calculate bbox through center, zoom and target size
     if not bbox and options.center and size and size[0] > 0 and size[1] > 0 and scale:
