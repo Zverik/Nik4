@@ -13,6 +13,7 @@ import argparse
 import math
 import tempfile
 import logging
+import codecs
 
 try:
     import cairo
@@ -355,7 +356,7 @@ def run(options):
         style_xml = sys.stdin.read()
         style_path = ''
     else:
-        with open(options.style, 'r') as style_file:
+        with codecs.open(options.style, 'r', 'utf-8') as style_file:
             style_xml = style_file.read()
         style_path = os.path.dirname(options.style)
     if options.base:
