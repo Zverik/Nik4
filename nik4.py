@@ -199,6 +199,8 @@ def xml_vars(style, variables):
             v[keyvalue[0]] = keyvalue[1].replace('&', '&amp;').replace(
                 '<', '&lt;').replace('>', '&gt;').replace(
                 '"', '&quot;').replace("'", '&#39;')
+    if not v:
+        return style
     # Scan all variables in style
     r = re.compile(r'\$\{([a-z0-9_]+)(?::([^}]*))?\}')
     rstyle = ''
@@ -215,6 +217,26 @@ def xml_vars(style, variables):
     if last < len(style):
         rstyle = rstyle + style[last:]
     return rstyle
+
+
+def reenable_layers(style, layers):
+    """Remove status=off from layers we need."""
+    layer_select = '|'.join([l.replace('\\', '\\\\').replace('|', '\\|')
+                             .replace('.', '\\.').replace('+', '\\+')
+                             .replace('*', '\\*') for l in layers])
+    style = re.sub(
+        r'(<Layer[^>]+name=["\'](?:{})["\'][^>]+)status=["\']off["\']'.format(layer_select),
+        r'\1', style, flags=re.DOTALL)
+    style = re.sub(
+        r'(<Layer[^>]+)status=["\']off["\']([^>]+name=["\'](?:{})["\'])'.format(layer_select),
+        r'\1\2', style, flags=re.DOTALL)
+    return style
+
+
+def parse_layers_string(layers):
+    if not layers:
+        return []
+    return [l1 for l1 in (l.strip() for l in layers.split(',')) if l1]
 
 
 def add_fonts(path):
@@ -296,7 +318,7 @@ def run(options):
 
     # svg / pdf can be scaled only in cairo mode
     if scale_factor != 1 and need_cairo and not HAS_CAIRO:
-        sys.stderr.write('Warning: install pycairo for using --factor or --ppi')
+        logging.error('Warning: install pycairo for using --factor or --ppi')
         scale_factor = 1
         ppmm = 90.7 / 25.4
 
@@ -361,8 +383,12 @@ def run(options):
         style_path = os.path.dirname(options.style)
     if options.base:
         style_path = options.base
-    if 'vars' in options and options.vars is not None:
+    if options.vars:
         style_xml = xml_vars(style_xml, options.vars)
+    if options.layers or options.add_layers:
+        style_xml = reenable_layers(
+            style_xml, parse_layers_string(options.layers) +
+            parse_layers_string(options.add_layers))
 
     # for layer processing we need to create the Map object
     m = mapnik.Map(100, 100)  # temporary size, will be changed before output
@@ -422,10 +448,10 @@ def run(options):
 
     # add / remove some layers
     if options.layers:
-        filter_layers(m, options.layers.split(','))
+        filter_layers(m, parse_layers_string(options.layers))
     if options.add_layers or options.hide_layers:
-        select_layers(m, options.add_layers.split(',') if options.add_layers else [],
-                      options.hide_layers.split(',') if options.hide_layers else [])
+        select_layers(m, parse_layers_string(options.add_layers),
+                      parse_layers_string(options.hide_layers))
 
     logging.debug('scale=%s', scale)
     logging.debug('scale_factor=%s', scale_factor)
