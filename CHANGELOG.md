@@ -1,5 +1,11 @@
 # Nik4 Change History
 
+## 1.7
+
+* Choose any projection with `--projection`. [#29](https://github.com/Zverik/Nik4/pull/29) - thanks @Nakaner.
+* Removing `status="off"` for enabled layers. [#27](https://github.com/Zverik/Nik4/issues/27), [#28](https://github.com/Zverik/Nik4/issues/28)
+* Refactoring and PEP8 compliance.
+
 ## 1.6, 1.06.2016
 
 * `--version` option.
