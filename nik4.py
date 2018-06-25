@@ -392,7 +392,7 @@ def run(options):
 
     # for layer processing we need to create the Map object
     m = mapnik.Map(100, 100)  # temporary size, will be changed before output
-    mapnik.load_map_from_string(m, style_xml, False, style_path)
+    mapnik.load_map_from_string(m, style_xml.encode("utf-8"), False, style_path)
     m.srs = proj_target.params()
 
     # register non-standard fonts
