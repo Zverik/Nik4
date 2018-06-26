@@ -16,7 +16,6 @@ class MapSettingsTestCase(unittest.TestCase):
         test_str = '-z 14 -b 8.01 49.09 8.05 49.12 ' + self.get_args_str()
         options = self.parser.parse_args(shlex.split(test_str))
         settings = Nik4Image.setup_options(options)
-        self.assertAlmostEqual(settings.scale, 9.55462046)
         self.assertFalse(settings.need_cairo)
         self.assertAlmostEqual(settings.bbox[0], 891669.1212541225)
         self.assertAlmostEqual(settings.bbox[1], 6290146.33132722)
