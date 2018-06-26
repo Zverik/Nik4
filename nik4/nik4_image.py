@@ -138,7 +138,7 @@ class Nik4Image:
             settings.bbox = TRANSFORM_LONLAT_WEBMERC.backward(bbox_web_merc)
             settings.bbox = settings.transform.forward(settings.bbox)
             # now correct the scale
-            settings.scale = correct_scale(settings.bbox, settings.scale, bbox_web_merc, settings.bbox)
+            settings.scale = Nik4Image.correct_scale(settings.bbox, settings.scale, bbox_web_merc, settings.bbox)
             center = settings.transform.forward(mapnik.Coord(*options.center))
             w = settings.size[0] * settings.scale / 2
             h = settings.size[1] * settings.scale / 2
