@@ -15,7 +15,7 @@ import tempfile
 import logging
 import codecs
 
-from nik4.nik4_settings import Nik4Image, EPSG_3857
+from nik4.nik4_image import Nik4Image, EPSG_3857
 
 try:
     import cairo
