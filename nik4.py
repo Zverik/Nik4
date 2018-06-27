@@ -126,6 +126,7 @@ def prepare_wld(bbox, mwidth, mheight):
     ]])
 
 
+<<<<<<< 565397e1199f3b78807e0477d82e92102359a0bd
 def write_metadata(bbox, mwidth, mheight, transform, img_output_file, wld_file=None, ozi_file=None):
     """Write worldfile and/or OZI file if required.
 
@@ -150,35 +151,6 @@ def write_metadata(bbox, mwidth, mheight, transform, img_output_file, wld_file=N
         ozi_file.write(prepare_ozi(bbox, mwidth, mheight, img_output_file, transform))
     if wld_file:
         wld_file.write(prepare_wld(bbox, mwidth, mheight))
-
-
-def parse_url(url, options):
-    """Parse map URL into options map"""
-    lat = None
-    lon = None
-    zoom = None
-    m = re.search(r'[#/=]([0-9]{1,2})/(-?[0-9]{1,2}\.[0-9]+)/(-?[0-9]{1,3}\.[0-9]+)', url)
-    if m:
-        zoom = int(m.group(1))
-        lat = float(m.group(2))
-        lon = float(m.group(3))
-    else:
-        m = re.search(r'lat=(-[0-9]{1,2}\.[0-9]+)', url, flags=re.IGNORECASE)
-        if m:
-            lat = float(m.group(1))
-        m = re.search(r'lon=(-[0-9]{1,3}\.[0-9]+)', url, flags=re.IGNORECASE)
-        if m:
-            lon = float(m.group(1))
-        m = re.search(r'zoom=([0-9]{1,2})', url, flags=re.IGNORECASE)
-        if m:
-            zoom = int(m.group(1))
-    if zoom and not options.zoom:
-        options.zoom = zoom
-    if lat and lon and not options.center:
-        options.center = [lon, lat]
-    if (not options.size and not options.size_px and not options.paper
-            and not options.fit and not options.bbox):
-        options.size_px = [1280, 1024]
 
 
 def get_paper_size(name):
@@ -480,6 +452,7 @@ if __name__ == "__main__":
     else:
         log_level = logging.INFO
     logging.basicConfig(level=log_level, format='%(asctime)s %(message)s', datefmt='%H:%M:%S')
-    settings = Nik4Image.setup_options(options)
+    settings = Nik4Image(options)
+    settings.setup_options()
     logging.info(settings.__dict__)
     run(options, settings)

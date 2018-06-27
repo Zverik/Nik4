@@ -15,9 +15,11 @@ TRANSFORM_LONLAT_WEBMERC = mapnik.ProjTransform(PROJ_LONLAT, PROJ_WEB_MERC)
 
 class Nik4Image:
 
-    def __init__(self):
+    def __init__(self, options):
+        self.options = options
         self.need_cairo = False
         self.fmt = None
+        self.ppmm = None
         self.scale = None
         self.scale_factor = None
         self.size = None
@@ -26,132 +28,166 @@ class Nik4Image:
         self.proj_target = None
         self.rotate = None
 
-    @staticmethod
-    def setup_options(options):
-        settings = Nik4Image()
-        dim_mm = None
-        settings.rotate = not options.norotate
 
-        if (options.ozi and options.projection.lower() != 'epsg:3857'
-                and options.projection != EPSG_3857):
+    def parse_url(url, options):
+        """Parse map URL into options map"""
+        lat = None
+        lon = None
+        zoom = None
+        m = re.search(r'[#/=]([0-9]{1,2})/(-?[0-9]{1,2}\.[0-9]+)/(-?[0-9]{1,3}\.[0-9]+)', url)
+        if m:
+            zoom = int(m.group(1))
+            lat = float(m.group(2))
+            lon = float(m.group(3))
+        else:
+            m = re.search(r'lat=(-[0-9]{1,2}\.[0-9]+)', url, flags=re.IGNORECASE)
+            if m:
+                lat = float(m.group(1))
+            m = re.search(r'lon=(-[0-9]{1,3}\.[0-9]+)', url, flags=re.IGNORECASE)
+            if m:
+                lon = float(m.group(1))
+            m = re.search(r'zoom=([0-9]{1,2})', url, flags=re.IGNORECASE)
+            if m:
+                zoom = int(m.group(1))
+        if zoom and not options.zoom:
+            self.options.zoom = zoom
+        if lat and lon and not self.options.center:
+            self.options.center = [lon, lat]
+        if (not self.options.size and not self.options.size_px and not self.options.paper
+                and not self.options.fit and not self.options.bbox):
+            self.options.size_px = [1280, 1024]
+
+    def _set_format(self):
+        # format should not be empty
+        if self.options.fmt:
+            self.fmt = self.options.fmt.lower()
+        elif '.' in self.options.output:
+            self.fmt = self.options.output.split('.')[-1].lower()
+        else:
+            self.fmt = 'png256'
+
+        self.need_cairo = self.fmt in ['svg', 'pdf']
+
+    def _set_ppm_and_scale_factor(self):
+        """
+        Set properties ppm and scale_factor.
+        """
+        # ppi and scale factor are the same thing
+        if self.options.ppi:
+            self.ppmm = self.options.ppi / 25.4
+            self.scale_factor = self.options.ppi / 90.7
+        else:
+            self.scale_factor = self.options.factor
+            self.ppmm = 90.7 / 25.4 * self.scale_factor
+
+        # svg / pdf can be scaled only in cairo mode
+        if self.scale_factor != 1 and self.need_cairo and not HAS_CAIRO:
+            logging.error('Warning: install pycairo for using --factor or --ppi')
+            self.scale_factor = 1
+            self.ppmm = 90.7 / 25.4
+
+    def setup_options(self):
+        dim_mm = None
+        self.rotate = not self.options.norotate
+
+        if (self.options.ozi and self.options.projection.lower() != 'epsg:3857'
+                and self.options.projection != EPSG_3857):
             raise Exception('Ozi map file output is only supported for Web Mercator (EPSG:3857). ' +
                             'Please remove --projection.')
 
-        if options.url:
-            parse_url(options.url, options)
+        self._set_format()
 
-        # format should not be empty
-        if options.fmt:
-            settings.fmt = options.fmt.lower()
-        elif '.' in options.output:
-            settings.fmt = options.output.split('.')[-1].lower()
-        else:
-            settings.fmt = 'png256'
-
-        settings.need_cairo = settings.fmt in ['svg', 'pdf']
+        if self.options.url:
+            parse_url(self.options.url, self.options)
 
         # output projection
-        if options.projection.isdigit():
-            settings.proj_target = mapnik.Projection('+init=epsg:{}'.format(options.projection))
+        if self.options.projection.isdigit():
+            self.proj_target = mapnik.Projection('+init=epsg:{}'.format(self.options.projection))
         else:
-            settings.proj_target = mapnik.Projection(options.projection)
-        settings.transform = mapnik.ProjTransform(PROJ_LONLAT, settings.proj_target)
+            self.proj_target = mapnik.Projection(self.options.projection)
+        self.transform = mapnik.ProjTransform(PROJ_LONLAT, self.proj_target)
 
         # get image size in millimeters
-        if options.paper:
+        if self.options.paper:
             portrait = False
-            if options.paper[0] == '-':
+            if self.options.paper[0] == '-':
                 portrait = True
-                settings.rotate = False
-                options.paper = options.paper[1:]
-            elif options.paper[0] == '+':
-                settings.rotate = False
-                options.paper = options.paper[1:]
+                self.rotate = False
+                self.options.paper = self.options.paper[1:]
+            elif self.options.paper[0] == '+':
+                self.rotate = False
+                self.options.paper = self.options.paper[1:]
             else:
-                settings.rotate = True
-            dim_mm = get_paper_size(options.paper.lower())
+                self.rotate = True
+            dim_mm = get_paper_size(self.options.paper.lower())
             if not dim_mm:
-                raise Exception('Incorrect paper format: ' + options.paper)
+                raise Exception('Incorrect paper format: ' + self.options.paper)
             if portrait:
                 dim_mm = [dim_mm[1], dim_mm[0]]
-        elif options.size:
-            dim_mm = options.size
-        if dim_mm and options.margin:
-            dim_mm[0] = max(0, dim_mm[0] - options.margin * 2)
-            dim_mm[1] = max(0, dim_mm[1] - options.margin * 2)
+        elif self.options.size:
+            dim_mm = self.options.size
+        if dim_mm and self.options.margin:
+            dim_mm[0] = max(0, dim_mm[0] - self.options.margin * 2)
+            dim_mm[1] = max(0, dim_mm[1] - self.options.margin * 2)
 
-        # ppi and scale factor are the same thing
-        if options.ppi:
-            ppmm = options.ppi / 25.4
-            settings.scale_factor = options.ppi / 90.7
-        else:
-            settings.scale_factor = options.factor
-            ppmm = 90.7 / 25.4 * settings.scale_factor
-
-        # svg / pdf can be scaled only in cairo mode
-        if settings.scale_factor != 1 and settings.need_cairo and not HAS_CAIRO:
-            logging.error('Warning: install pycairo for using --factor or --ppi')
-            settings.scale_factor = 1
-            ppmm = 90.7 / 25.4
+        self._set_ppm_and_scale_factor()
 
         # convert physical size to pixels
-        if options.size_px:
-            settings.size = options.size_px
+        if self.options.size_px:
+            self.size = self.options.size_px
         elif dim_mm:
-            settings.size = [int(round(dim_mm[0] * ppmm)), int(round(dim_mm[1] * ppmm))]
+            self.size = [int(round(dim_mm[0] * self.ppmm)), int(round(dim_mm[1] * self.ppmm))]
 
-        if settings.size and settings.size[0] + settings.size[1] <= 0:
+        if self.size and self.size[0] + self.size[1] <= 0:
             raise Exception('Both dimensions are less or equal to zero')
 
-        if options.bbox:
-            settings.bbox = options.bbox
+        if self.options.bbox:
+            self.bbox = self.options.bbox
 
         # scale can be specified with zoom or with 1:NNN scale
         fix_scale = False
-        if options.zoom:
-            settings.scale = 2 * 3.14159 * 6378137 / 2 ** (options.zoom + 8) / settings.scale_factor
-        elif options.scale:
-            settings.scale = options.scale * 0.00028 / settings.scale_factor
+        if self.options.zoom:
+            self.scale = 2 * 3.14159 * 6378137 / 2 ** (self.options.zoom + 8) / self.scale_factor
+        elif self.options.scale:
+            self.scale = self.options.scale * 0.00028 / self.scale_factor
             # Now we have to divide by cos(lat), but we might not know latitude at this point
             # TODO: division should only happen for EPSG:3857 or not at all
-            if options.center:
-                settings.scale = settings.scale / math.cos(math.radians(options.center[1]))
-            elif options.bbox:
-                settings.scale = settings.scale / math.cos(math.radians((options.bbox[3] + options.bbox[1]) / 2))
+            if self.options.center:
+                self.scale = self.scale / math.cos(math.radians(self.options.center[1]))
+            elif self.options.bbox:
+                self.scale = self.scale / math.cos(math.radians((self.options.bbox[3] + self.options.bbox[1]) / 2))
             else:
                 fix_scale = True
 
         # all calculations are in EPSG:3857 projection (it's easier)
-        if settings.bbox:
-            settings.bbox = settings.transform.forward(mapnik.Box2d(*settings.bbox))
-            bbox_web_merc = TRANSFORM_LONLAT_WEBMERC.forward(mapnik.Box2d(*(options.bbox)))
-            if settings.scale:
-                settings.scale = Nik4Image.correct_scale(settings.bbox, settings.scale, bbox_web_merc, settings.bbox)
+        if self.bbox:
+            self.bbox = self.transform.forward(mapnik.Box2d(*self.bbox))
+            bbox_web_merc = TRANSFORM_LONLAT_WEBMERC.forward(mapnik.Box2d(*(self.options.bbox)))
+            if self.scale:
+                self.correct_scale(bbox_web_merc)
 
         # calculate bbox through center, zoom and target size
-        if not settings.bbox and options.center and settings.size and settings.size[0] > 0 and settings.size[1] > 0 and settings.scale:
+        if not self.bbox and self.options.center and self.size and self.size[0] > 0 and self.size[1] > 0 and self.scale:
             # We don't know over which latitude range the bounding box spans, so we
             # first do everything in Web Mercator.
-            center = TRANSFORM_LONLAT_WEBMERC.forward(mapnik.Coord(*options.center))
-            w = settings.size[0] * settings.scale / 2
-            h = settings.size[1] * settings.scale / 2
+            center = TRANSFORM_LONLAT_WEBMERC.forward(mapnik.Coord(*self.options.center))
+            w = self.size[0] * self.scale / 2
+            h = self.size[1] * self.scale / 2
             bbox_web_merc = mapnik.Box2d(center.x-w, center.y-h, center.x+w, center.y+h)
-            settings.bbox = TRANSFORM_LONLAT_WEBMERC.backward(bbox_web_merc)
-            settings.bbox = settings.transform.forward(settings.bbox)
+            self.bbox = TRANSFORM_LONLAT_WEBMERC.backward(bbox_web_merc)
+            self.bbox = self.transform.forward(self.bbox)
             # now correct the scale
-            settings.scale = Nik4Image.correct_scale(settings.bbox, settings.scale, bbox_web_merc, settings.bbox)
-            center = settings.transform.forward(mapnik.Coord(*options.center))
-            w = settings.size[0] * settings.scale / 2
-            h = settings.size[1] * settings.scale / 2
-            settings.bbox = mapnik.Box2d(center.x-w, center.y-h, center.x+w, center.y+h)
-        return settings
+            self.correct_scale(bbox_web_merc)
+            center = self.transform.forward(mapnik.Coord(*self.options.center))
+            w = self.size[0] * self.scale / 2
+            h = self.size[1] * self.scale / 2
+            self.bbox = mapnik.Box2d(center.x-w, center.y-h, center.x+w, center.y+h)
 
-    @staticmethod
-    def correct_scale(bbox, scale, bbox_web_merc, bbox_target):
+    def correct_scale(self, bbox_web_merc):
         # correct scale if output projection is not EPSG:3857
         x_dist_merc = bbox_web_merc.maxx - bbox_web_merc.minx
-        x_dist_target = bbox.maxx - bbox.minx
-        return scale * (x_dist_target / x_dist_merc)
+        x_dist_target = self.bbox.maxx - self.bbox.minx
+        self.scale = self.scale * (x_dist_target / x_dist_merc)
 
     @staticmethod
     def get_argument_parser():

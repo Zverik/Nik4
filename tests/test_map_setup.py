@@ -19,7 +19,9 @@ class MapSettingsTestCase(unittest.TestCase):
     def get_settings(self, test_str):
         test_str += ' ' + self.get_args_str()
         options = self.parser.parse_args(shlex.split(test_str))
-        return Nik4Image.setup_options(options)
+        settings = Nik4Image(options)
+        settings.setup_options()
+        return settings
 
 
     def test_zoom_and_bbox(self):
