@@ -47,3 +47,11 @@ class MapSettingsTestCase(unittest.TestCase):
         self.assertEqual(settings.size, [400, 600])
         self.assertEqual(settings.scale_factor, 1)
         self.assertEqual(settings.fmt, 'png')
+
+    def test_only_center_scale(self):
+        settings = self.get_settings('-c 8.0327 49.0748 --scale 25000')
+        self.assertIsNone(settings.bbox)
+
+    def test_only_center_scale_ppi(self):
+        settings = self.get_settings('-c 8.0327 49.0748 --scale 25000 --ppi 90')
+        self.assertIsNone(settings.bbox)
