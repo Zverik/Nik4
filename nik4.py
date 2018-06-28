@@ -126,7 +126,6 @@ def prepare_wld(bbox, mwidth, mheight):
     ]])
 
 
-<<<<<<< 565397e1199f3b78807e0477d82e92102359a0bd
 def write_metadata(bbox, mwidth, mheight, transform, img_output_file, wld_file=None, ozi_file=None):
     """Write worldfile and/or OZI file if required.
 
@@ -151,35 +150,6 @@ def write_metadata(bbox, mwidth, mheight, transform, img_output_file, wld_file=N
         ozi_file.write(prepare_ozi(bbox, mwidth, mheight, img_output_file, transform))
     if wld_file:
         wld_file.write(prepare_wld(bbox, mwidth, mheight))
-
-
-def get_paper_size(name):
-    """Returns paper size for name, [long, short] sides in mm"""
-    # ISO A*
-    m = re.match(r'^a?(\d)$', name)
-    if m:
-        return [math.floor(1000 / 2**((2*int(m.group(1)) - 1) / 4.0) + 0.2),
-                math.floor(1000 / 2**((2*(int(m.group(1)) + 1) - 1) / 4.0) + 0.2)]
-    # ISO B*
-    m = re.match(r'^b(\d)$', name)
-    if m:
-        return [math.floor(1000 / 2**((int(m.group(1)) - 1) / 2.0) + 0.2),
-                math.floor(1000 / 2**(int(m.group(1)) / 2.0) + 0.2)]
-    # German extensions
-    if name == '4a0':
-        return [2378, 1682]
-    if name == '2a0':
-        return [1682, 1189]
-    # US Legal
-    if re.match(r'^leg', name):
-        return [355.6, 215.9]
-    # US Letter
-    if re.match(r'^l', name):
-        return [279.4, 215.9]
-    # Cards
-    if re.match(r'^c(?:re|ar)d', name):
-        return [85.6, 54]
-    return None
 
 
 def xml_vars(style, variables):
@@ -271,7 +241,7 @@ def run(options, settings):
     if options.fit:
         settings.bbox = layer_bbox(m, options.fit.split(','), settings.proj_target, settings.bbox)
         # here's where we can fix scale, no new bboxes below
-        if settings.bbox and fix_scale:
+        if settings.bbox and settings.fix_scale:
             settings.scale = settings.scale / math.cos(math.radians(settings.transform.backward(settings.bbox.center()).y))
         bbox_web_merc = Nik4Image.TRANSFORM_LONLAT_WEBMERC.forward(settings.transform.backward(settings.bbox))
         if settings.scale:
@@ -283,7 +253,7 @@ def run(options, settings):
             else:
                 tscale = min((settings.bbox.maxx - settings.bbox.minx) / max(settings.size[0], 0.01),
                              (settings.bbox.maxy - settings.bbox.miny) / max(settings.size[1], 0.01))
-            settings.bbox.pad(options.padding * ppmm * tscale)
+            settings.bbox.pad(options.padding * settings.ppmm * tscale)
 
     # bbox should be specified by this point
     if not settings.bbox:
@@ -452,7 +422,7 @@ if __name__ == "__main__":
     else:
         log_level = logging.INFO
     logging.basicConfig(level=log_level, format='%(asctime)s %(message)s', datefmt='%H:%M:%S')
-    settings = Nik4Image(options)
+    settings = Nik4Image(options, HAS_CAIRO)
     settings.setup_options()
     logging.info(settings.__dict__)
     run(options, settings)

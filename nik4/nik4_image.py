@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import math
+import logging
 import mapnik
+import math
+import re
+from nik4.paper_size import get_paper_size
 
 
 VERSION = '1.7'
@@ -15,12 +18,14 @@ TRANSFORM_LONLAT_WEBMERC = mapnik.ProjTransform(PROJ_LONLAT, PROJ_WEB_MERC)
 
 class Nik4Image:
 
-    def __init__(self, options):
+    def __init__(self, options, has_cairo):
         self.options = options
+        self.has_cairo = has_cairo
         self.need_cairo = False
         self.fmt = None
         self.ppmm = None
         self.scale = None
+        self.fix_scale = False
         self.scale_factor = None
         self.size = None
         self.bbox = None
@@ -29,7 +34,7 @@ class Nik4Image:
         self.rotate = None
 
 
-    def parse_url(url, options):
+    def _parse_url(self, url, options):
         """Parse map URL into options map"""
         lat = None
         lon = None
@@ -81,10 +86,33 @@ class Nik4Image:
             self.ppmm = 90.7 / 25.4 * self.scale_factor
 
         # svg / pdf can be scaled only in cairo mode
-        if self.scale_factor != 1 and self.need_cairo and not HAS_CAIRO:
+        if self.scale_factor != 1 and self.need_cairo and not self.has_cairo:
             logging.error('Warning: install pycairo for using --factor or --ppi')
             self.scale_factor = 1
             self.ppmm = 90.7 / 25.4
+
+    def _set_projections_and_transform(self):
+        if self.options.projection.isdigit():
+            self.proj_target = mapnik.Projection('+init=epsg:{}'.format(self.options.projection))
+        else:
+            self.proj_target = mapnik.Projection(self.options.projection)
+        self.transform = mapnik.ProjTransform(PROJ_LONLAT, self.proj_target)
+
+    def _set_bbox_with_center_scale_and_size(self):
+        # We don't know over which latitude range the bounding box spans, so we
+        # first do everything in Web Mercator.
+        center = TRANSFORM_LONLAT_WEBMERC.forward(mapnik.Coord(*self.options.center))
+        w = self.size[0] * self.scale / 2
+        h = self.size[1] * self.scale / 2
+        bbox_web_merc = mapnik.Box2d(center.x-w, center.y-h, center.x+w, center.y+h)
+        self.bbox = TRANSFORM_LONLAT_WEBMERC.backward(bbox_web_merc)
+        self.bbox = self.transform.forward(self.bbox)
+        # now correct the scale
+        self.correct_scale(bbox_web_merc)
+        center = self.transform.forward(mapnik.Coord(*self.options.center))
+        w = self.size[0] * self.scale / 2
+        h = self.size[1] * self.scale / 2
+        self.bbox = mapnik.Box2d(center.x-w, center.y-h, center.x+w, center.y+h)
 
     def setup_options(self):
         dim_mm = None
@@ -98,14 +126,10 @@ class Nik4Image:
         self._set_format()
 
         if self.options.url:
-            parse_url(self.options.url, self.options)
+            self._parse_url(self.options.url, self.options)
 
         # output projection
-        if self.options.projection.isdigit():
-            self.proj_target = mapnik.Projection('+init=epsg:{}'.format(self.options.projection))
-        else:
-            self.proj_target = mapnik.Projection(self.options.projection)
-        self.transform = mapnik.ProjTransform(PROJ_LONLAT, self.proj_target)
+        self._set_projections_and_transform()
 
         # get image size in millimeters
         if self.options.paper:
@@ -145,7 +169,6 @@ class Nik4Image:
             self.bbox = self.options.bbox
 
         # scale can be specified with zoom or with 1:NNN scale
-        fix_scale = False
         if self.options.zoom:
             self.scale = 2 * 3.14159 * 6378137 / 2 ** (self.options.zoom + 8) / self.scale_factor
         elif self.options.scale:
@@ -157,7 +180,7 @@ class Nik4Image:
             elif self.options.bbox:
                 self.scale = self.scale / math.cos(math.radians((self.options.bbox[3] + self.options.bbox[1]) / 2))
             else:
-                fix_scale = True
+                self.fix_scale = True
 
         # all calculations are in EPSG:3857 projection (it's easier)
         if self.bbox:
@@ -168,20 +191,7 @@ class Nik4Image:
 
         # calculate bbox through center, zoom and target size
         if not self.bbox and self.options.center and self.size and self.size[0] > 0 and self.size[1] > 0 and self.scale:
-            # We don't know over which latitude range the bounding box spans, so we
-            # first do everything in Web Mercator.
-            center = TRANSFORM_LONLAT_WEBMERC.forward(mapnik.Coord(*self.options.center))
-            w = self.size[0] * self.scale / 2
-            h = self.size[1] * self.scale / 2
-            bbox_web_merc = mapnik.Box2d(center.x-w, center.y-h, center.x+w, center.y+h)
-            self.bbox = TRANSFORM_LONLAT_WEBMERC.backward(bbox_web_merc)
-            self.bbox = self.transform.forward(self.bbox)
-            # now correct the scale
-            self.correct_scale(bbox_web_merc)
-            center = self.transform.forward(mapnik.Coord(*self.options.center))
-            w = self.size[0] * self.scale / 2
-            h = self.size[1] * self.scale / 2
-            self.bbox = mapnik.Box2d(center.x-w, center.y-h, center.x+w, center.y+h)
+            self._set_bbox_with_center_scale_and_size()
 
     def correct_scale(self, bbox_web_merc):
         # correct scale if output projection is not EPSG:3857

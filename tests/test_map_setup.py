@@ -19,7 +19,7 @@ class MapSettingsTestCase(unittest.TestCase):
     def get_settings(self, test_str):
         test_str += ' ' + self.get_args_str()
         options = self.parser.parse_args(shlex.split(test_str))
-        settings = Nik4Image(options)
+        settings = Nik4Image(options, True)
         settings.setup_options()
         return settings
 
