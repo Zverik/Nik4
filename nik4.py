@@ -407,7 +407,8 @@ def run(options):
         if bbox and fix_scale:
             scale = scale / math.cos(math.radians(transform.backward(bbox.center()).y))
         bbox_web_merc = transform_lonlat_webmerc.forward(transform.backward(bbox))
-        scale = correct_scale(bbox, scale, bbox_web_merc, bbox)
+        if scale:
+            scale = correct_scale(bbox, scale, bbox_web_merc, bbox)
         # expand bbox with padding in mm
         if bbox and options.padding and (scale or size):
             if scale:
