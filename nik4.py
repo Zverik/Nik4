@@ -604,12 +604,8 @@ if __name__ == "__main__":
     parser.add_argument('--url', help='URL of a map to center on')
     parser.add_argument('--ozi', type=argparse.FileType('w'), help='Generate ozi map file')
     parser.add_argument('--wld', type=argparse.FileType('w'), help='Generate world file')
-    parser.add_argument('-t', '--tiles', type=int, choices=range(1, 13), 
-                        help='Write N×N tiles, then join using imagemagick')
-    parser.add_argument('--tiles-x', type=int, choices=range(1, 13), default=1,
-                        help='number of tiles on x axis')
-    parser.add_argument('--tiles-y', type=int, choices=range(1, 13), default=1,
-                        help='number of tiles on y axis')
+    parser.add_argument('-t', '--tiles',
+                        help='Write N×N (--tiles N) or N×M (--tiles NxM) tiles, then join using imagemagick')
     parser.add_argument('--just-tiles', action='store_true', default=False,
                         help='Do not join tiles, instead write ozi/wld file for each')
     parser.add_argument('-v', '--debug', action='store_true', default=False,
@@ -628,8 +624,17 @@ if __name__ == "__main__":
     options = parser.parse_args()
 
     if options.tiles:
-        options.tiles_x = options.tiles
-        options.tiles_y = options.tiles
+        if re.search(r'^\d+$', options.tiles):
+            options.tiles_x = int(options.tiles)
+            options.tiles_y = options.tiles_x
+        else:
+            match = re.search(r'^(\d+)x(\d+)$', options.tiles)
+            if (match):
+               options.tiles_x = int(match.group(1))
+               options.tiles_y = int(match.group(2))
+        if options.tiles_x == 0 or options.tiles_y == 0:
+            raise Exception('--tiles needs positive integer argument, or two integers separated by x')
+
     if options.debug:
         log_level = logging.DEBUG
     else:
