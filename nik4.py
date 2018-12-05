@@ -446,8 +446,8 @@ def run(options):
         options.tiles_y = 1
     max_img_size = max(size[0] / options.tiles_x, size[1] / options.tiles_y)
     if max_img_size > 16384:
-        raise Exception('Image size exceeds mapnik limit ({} > {}), use --tiles'.format(
-           max_img_size , 16384))
+        raise Exception('Image size exceeds mapnik limit ({} > {}), use {}--tiles'.format(
+           max_img_size , 16384, 'a larger value for ' if options.tiles_x > 1 or options.tiles_y > 1 else ''))
 
     # add / remove some layers
     if options.layers:
@@ -604,7 +604,7 @@ if __name__ == "__main__":
     parser.add_argument('--url', help='URL of a map to center on')
     parser.add_argument('--ozi', type=argparse.FileType('w'), help='Generate ozi map file')
     parser.add_argument('--wld', type=argparse.FileType('w'), help='Generate world file')
-    parser.add_argument('-t', '--tiles',
+    parser.add_argument('-t', '--tiles', default='1',
                         help='Write N×N (--tiles N) or N×M (--tiles NxM) tiles, then join using imagemagick')
     parser.add_argument('--just-tiles', action='store_true', default=False,
                         help='Do not join tiles, instead write ozi/wld file for each')
@@ -623,17 +623,20 @@ if __name__ == "__main__":
     parser.add_argument('output', help='Resulting image file')
     options = parser.parse_args()
 
+    options.tiles_x = 0
+    options.tiles_y = 0
+
     if options.tiles:
-        if re.search(r'^\d+$', options.tiles):
+        if options.tiles.isdigit():
             options.tiles_x = int(options.tiles)
             options.tiles_y = options.tiles_x
         else:
             match = re.search(r'^(\d+)x(\d+)$', options.tiles)
-            if (match):
+            if match:
                options.tiles_x = int(match.group(1))
                options.tiles_y = int(match.group(2))
-        if options.tiles_x == 0 or options.tiles_y == 0:
-            raise Exception('--tiles needs positive integer argument, or two integers separated by x')
+        if not 1 <= options.tiles_x * options.tiles_y <= 144:
+            raise Exception('--tiles needs positive integer argument, or two integers separated by x; max. number of tiles is 144')
 
     if options.debug:
         log_level = logging.DEBUG
