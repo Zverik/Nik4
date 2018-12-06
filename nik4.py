@@ -441,11 +441,13 @@ def run(options):
     elif size[1] == 0:
         size[1] = int(round(size[0] / (bbox.maxx - bbox.minx) * (bbox.maxy - bbox.miny)))
 
-    if options.output == '-' or (need_cairo and options.tiles > 1):
-        options.tiles = 1
-    if max(size[0], size[1]) / options.tiles > 16384:
-        raise Exception('Image size exceeds mapnik limit ({} > {}), use --tiles'.format(
-            max(size[0], size[1]) / options.tiles, 16384))
+    if options.output == '-' or (need_cairo and (options.tiles_x > 1 or options.tiles_y > 1)):
+        options.tiles_x = 1
+        options.tiles_y = 1
+    max_img_size = max(size[0] / options.tiles_x, size[1] / options.tiles_y)
+    if max_img_size > 16384:
+        raise Exception('Image size exceeds mapnik limit ({} > {}), use {}--tiles'.format(
+           max_img_size , 16384, 'a larger value for ' if options.tiles_x > 1 or options.tiles_y > 1 else ''))
 
     # add / remove some layers
     if options.layers:
@@ -487,7 +489,7 @@ def run(options):
         else:
             mapnik.render_to_file(m, outfile, fmt)
     else:
-        if options.tiles == 1:
+        if options.tiles_x == options.tiles_y == 1:
             im = mapnik.Image(size[0], size[1])
             mapnik.render(m, im, scale_factor)
             im.save(outfile, fmt)
@@ -499,8 +501,8 @@ def run(options):
             elif rdiff < 0:
                 bbox.width((bbox.maxy - bbox.miny) * size[0] / size[1])
             scale = (bbox.maxx - bbox.minx) / size[0]
-            width = max(32, int(math.ceil(1.0 * size[0] / options.tiles)))
-            height = max(32, int(math.ceil(1.0 * size[1] / options.tiles)))
+            width = max(32, int(math.ceil(1.0 * size[0] / options.tiles_x)))
+            height = max(32, int(math.ceil(1.0 * size[1] / options.tiles_y)))
             m.resize(width, height)
             m.buffer_size = TILE_BUFFER
             tile_cnt = [int(math.ceil(1.0 * size[0] / width)),
@@ -602,8 +604,8 @@ if __name__ == "__main__":
     parser.add_argument('--url', help='URL of a map to center on')
     parser.add_argument('--ozi', type=argparse.FileType('w'), help='Generate ozi map file')
     parser.add_argument('--wld', type=argparse.FileType('w'), help='Generate world file')
-    parser.add_argument('-t', '--tiles', type=int, choices=range(1, 13), default=1,
-                        help='Write N×N tiles, then join using imagemagick')
+    parser.add_argument('-t', '--tiles', default='1',
+                        help='Write N×N (--tiles N) or N×M (--tiles NxM) tiles, then join using imagemagick')
     parser.add_argument('--just-tiles', action='store_true', default=False,
                         help='Do not join tiles, instead write ozi/wld file for each')
     parser.add_argument('-v', '--debug', action='store_true', default=False,
@@ -620,6 +622,21 @@ if __name__ == "__main__":
     parser.add_argument('style', help='Style file for mapnik')
     parser.add_argument('output', help='Resulting image file')
     options = parser.parse_args()
+
+    options.tiles_x = 0
+    options.tiles_y = 0
+
+    if options.tiles:
+        if options.tiles.isdigit():
+            options.tiles_x = int(options.tiles)
+            options.tiles_y = options.tiles_x
+        else:
+            match = re.search(r'^(\d+)x(\d+)$', options.tiles)
+            if match:
+               options.tiles_x = int(match.group(1))
+               options.tiles_y = int(match.group(2))
+        if not 1 <= options.tiles_x * options.tiles_y <= 144:
+            raise Exception('--tiles needs positive integer argument, or two integers separated by x; max. number of tiles is 144')
 
     if options.debug:
         log_level = logging.DEBUG
