@@ -507,10 +507,9 @@ def run(options):
                 surface = cairo.PDFSurface(outfile, size[0], size[1])
             mapnik.render(m, surface, scale_factor, 0, 0)
             surface.finish()
-            write_metadata(m.envelope(), size[0], size[1], transform, options.output, options.wld, options.ozi)
         else:
             mapnik.render_to_file(m, outfile, fmt)
-            write_metadata(m.envelope(), size[0], size[1], transform, options.output, options.wld, options.ozi)
+        write_metadata(m.envelope(), size[0], size[1], transform, options.output, options.wld, options.ozi)
     else:
         if options.tiles_x == options.tiles_y == 1:
             im = mapnik.Image(size[0], size[1])
