@@ -131,6 +131,32 @@ def prepare_wld(bbox, mwidth, mheight):
     ]])
 
 
+def write_metadata(bbox, mwidth, mheight, transform, img_output_file, wld_file=None, ozi_file=None):
+    """Write worldfile and/or OZI file if required.
+
+    Parameters
+    ----------
+    bbox: mapnik.Box2d
+        bounding box of the map
+    mwidth : int
+        width of the image
+    mheight : int
+        height of the image
+    transform : mapnik.ProjTransform
+        transformation from EPSG:4326 to the target projection
+    img_output_file : str
+        image output path (required for OZI file)
+    wld : file
+        file pointer to the world file to be written (or None if non has to be written)
+    ozi : file
+        file pointer to the OZI file to be written (or None if non has to be written)
+    """
+    if ozi_file:
+        ozi_file.write(prepare_ozi(bbox, mwidth, mheight, img_output_file, transform))
+    if wld_file:
+        wld_file.write(prepare_wld(bbox, mwidth, mheight))
+
+
 def parse_url(url, options):
     """Parse map URL into options map"""
     lat = None
@@ -463,16 +489,11 @@ def run(options):
     logging.debug('bbox_wgs84=%s', transform.backward(bbox) if bbox else None)
     logging.debug('layers=%s', ','.join([l.name for l in m.layers if l.active]))
 
-    # generate metadata
-    if options.ozi:
-        options.ozi.write(prepare_ozi(bbox, size[0], size[1], options.output, transform))
-    if options.wld:
-        options.wld.write(prepare_wld(bbox, size[0], size[1]))
-
     # export image
     m.aspect_fix_mode = mapnik.aspect_fix_mode.GROW_BBOX
     m.resize(size[0], size[1])
     m.zoom_to_box(bbox)
+    logging.debug('m.envelope(): {}'.format(m.envelope()))
 
     outfile = options.output
     if options.output == '-':
@@ -488,11 +509,13 @@ def run(options):
             surface.finish()
         else:
             mapnik.render_to_file(m, outfile, fmt)
+        write_metadata(m.envelope(), size[0], size[1], transform, options.output, options.wld, options.ozi)
     else:
         if options.tiles_x == options.tiles_y == 1:
             im = mapnik.Image(size[0], size[1])
             mapnik.render(m, im, scale_factor)
             im.save(outfile, fmt)
+            write_metadata(m.envelope(), size[0], size[1], transform, options.output, options.wld, options.ozi)
         else:
             # we cannot make mapnik calculate scale for us, so fixing aspect ratio outselves
             rdiff = (bbox.maxx-bbox.minx) / (bbox.maxy-bbox.miny) - size[0] / size[1]
@@ -552,6 +575,7 @@ def run(options):
                 if result == 0:
                     for tile in tile_files:
                         os.remove(tile)
+                    write_metadata(bbox, size[0], size[1], transform, options.output, options.wld, options.ozi)
 
     if options.output == '-':
         if sys.platform == "win32":
