@@ -164,7 +164,7 @@ stroke width in the last example configurable, and request GPX file name:
 
 Now to make an image of a route, use this command:
 
-    nik4.py --fit route --ppi 150 -a 6 --vars width=8 route=~/routes/day2.gpx osm.xml route.png
+    nik4.py --fit route --ppi 150 -a 6 osm.xml route.png --vars width=8 route=~/routes/day2.gpx
 
 Note that path would likely to be resolved relative to the XML file location. If you omit `route` variable
 in this example, you'll get an error message.
