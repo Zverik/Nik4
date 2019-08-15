@@ -323,9 +323,9 @@ def run(options, settings):
         write_metadata(m.envelope(), settings.size[0], settings.size[1], settings.transform, options.output, options.wld, options.ozi)
     else:
         if options.tiles_x == options.tiles_y == 1:
-            im = mapnik.Image(size[0], size[1])
+            im = mapnik.Image(settings.size[0], settings.size[1])
             mapnik.render(m, im, settings.scale_factor)
-            im.save(outfile, fmt)
+            im.save(outfile, settings.fmt)
             write_metadata(m.envelope(), settings.size[0], settings.size[1], settings.transform, options.output, options.wld, options.ozi)
         else:
             # we cannot make mapnik calculate scale for us, so fixing aspect ratio outselves
