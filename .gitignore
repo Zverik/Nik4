@@ -9,3 +9,4 @@ MANIFEST
 *.wld
 *.svg
 *.xml
+__pycache__
