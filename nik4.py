@@ -472,8 +472,9 @@ def run(options):
         options.tiles_y = 1
     max_img_size = max(size[0] / options.tiles_x, size[1] / options.tiles_y)
     if max_img_size > 16384:
+        larger_part = 'a larger value for ' if options.tiles_x > 1 or options.tiles_y > 1 else ''
         raise Exception('Image size exceeds mapnik limit ({} > {}), use {}--tiles'.format(
-           max_img_size , 16384, 'a larger value for ' if options.tiles_x > 1 or options.tiles_y > 1 else ''))
+           max_img_size, 16384, larger_part))
 
     # add / remove some layers
     if options.layers:
@@ -509,13 +510,15 @@ def run(options):
             surface.finish()
         else:
             mapnik.render_to_file(m, outfile, fmt)
-        write_metadata(m.envelope(), size[0], size[1], transform, options.output, options.wld, options.ozi)
+        write_metadata(m.envelope(), size[0], size[1], transform, options.output,
+                       options.wld, options.ozi)
     else:
         if options.tiles_x == options.tiles_y == 1:
             im = mapnik.Image(size[0], size[1])
             mapnik.render(m, im, scale_factor)
             im.save(outfile, fmt)
-            write_metadata(m.envelope(), size[0], size[1], transform, options.output, options.wld, options.ozi)
+            write_metadata(m.envelope(), size[0], size[1], transform, options.output,
+                           options.wld, options.ozi)
         else:
             # we cannot make mapnik calculate scale for us, so fixing aspect ratio outselves
             rdiff = (bbox.maxx-bbox.minx) / (bbox.maxy-bbox.miny) - size[0] / size[1]
@@ -575,7 +578,8 @@ def run(options):
                 if result == 0:
                     for tile in tile_files:
                         os.remove(tile)
-                    write_metadata(bbox, size[0], size[1], transform, options.output, options.wld, options.ozi)
+                    write_metadata(bbox, size[0], size[1], transform, options.output,
+                                   options.wld, options.ozi)
 
     if options.output == '-':
         if sys.platform == "win32":
@@ -629,7 +633,8 @@ if __name__ == "__main__":
     parser.add_argument('--ozi', type=argparse.FileType('w'), help='Generate ozi map file')
     parser.add_argument('--wld', type=argparse.FileType('w'), help='Generate world file')
     parser.add_argument('-t', '--tiles', default='1',
-                        help='Write N×N (--tiles N) or N×M (--tiles NxM) tiles, then join using imagemagick')
+                        help='Write N×N (--tiles N) or N×M (--tiles NxM) tiles, '
+                        'then join using imagemagick')
     parser.add_argument('--just-tiles', action='store_true', default=False,
                         help='Do not join tiles, instead write ozi/wld file for each')
     parser.add_argument('-v', '--debug', action='store_true', default=False,
@@ -657,10 +662,11 @@ if __name__ == "__main__":
         else:
             match = re.search(r'^(\d+)x(\d+)$', options.tiles)
             if match:
-               options.tiles_x = int(match.group(1))
-               options.tiles_y = int(match.group(2))
+                options.tiles_x = int(match.group(1))
+                options.tiles_y = int(match.group(2))
         if not 1 <= options.tiles_x * options.tiles_y <= 144:
-            raise Exception('--tiles needs positive integer argument, or two integers separated by x; max. number of tiles is 144')
+            raise Exception('--tiles needs positive integer argument, or two integers separated '
+                            'by x; max. number of tiles is 144')
 
     if options.debug:
         log_level = logging.DEBUG
