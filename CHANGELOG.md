@@ -1,10 +1,13 @@
 # Nik4 Change History
 
-## 1.7
+## 1.7, 27.03.2021
 
 * Choose any projection with `--projection`. [#29](https://github.com/Zverik/Nik4/pull/29) - thanks @Nakaner.
 * Removing `status="off"` for enabled layers. [#27](https://github.com/Zverik/Nik4/issues/27), [#28](https://github.com/Zverik/Nik4/issues/28)
 * Refactoring and PEP8 compliance.
+* Fixed mapnik bindings that require 8-bit strings. [#30](https://github.com/Zverik/Nik4/pull/30) - thanks @Nakaner.
+* Fixed scale calculation with `--fit` option present. [#33](https://github.com/Zverik/Nik4/pull/33) - thanks @knowname.
+* You can use `--tiles NxM` (e.g. 2x4) now. [#35](https://github.com/Zverik/Nik4/pull/35) - thanks @woodpeck.
 
 ## 1.6, 1.06.2016
 
