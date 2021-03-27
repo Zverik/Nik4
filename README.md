@@ -28,7 +28,7 @@ Again, run `nik4.py -h` to see the list of all available options. Here are some 
 
 First, if you haven't already, install PostgreSQL+PostGIS and Mapnik, and use osm2pgsql
 to populate the database with a planet extract. For instructions see
-[here](http://switch2osm.org/loading-osm-data/) or [here](http://wiki.openstreetmap.org/wiki/User:Zverik/Tile_Server_on_Fedora_20).
+[here](https://osm2pgsql.org/doc/manual.html) or [here](http://wiki.openstreetmap.org/wiki/User:Zverik/Tile_Server_on_Fedora_20).
 Get bounds by visiting [osm.org](http://openstreetmap.org): click "Export" and "Choose another region". Then:
 
     nik4.py -b -0.009 51.47 0.013 51.484 -z 17 openstreetmap-carto/osm.xml party-before.png
