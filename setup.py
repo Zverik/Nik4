@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(
         name='Nik4',
@@ -22,6 +22,7 @@ to see available options and their descriptions.
         requires=['Mapnik'],
         keywords='Mapnik,GIS,OpenStreetMap,mapping,export',
         scripts=['nik4.py'],
+        packages=[],
         classifiers=[
             'Development Status :: 5 - Production/Stable',
             'Environment :: Console',
