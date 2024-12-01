@@ -286,6 +286,11 @@ def run(options):
     bbox = None
     rotate = not options.norotate
 
+    # register non-standard fonts
+    if options.fonts:
+        for f in options.fonts:
+            add_fonts(f)
+
     if (options.ozi and options.projection.lower() != 'epsg:3857'
             and options.projection != EPSG_3857):
         raise Exception('Ozi map file output is only supported for Web Mercator (EPSG:3857). ' +
@@ -420,11 +425,6 @@ def run(options):
     m = mapnik.Map(100, 100)  # temporary size, will be changed before output
     mapnik.load_map_from_string(m, style_xml.encode("utf-8"), False, style_path)
     m.srs = proj_target.params()
-
-    # register non-standard fonts
-    if options.fonts:
-        for f in options.fonts:
-            add_fonts(f)
 
     # get bbox from layer extents
     if options.fit:
