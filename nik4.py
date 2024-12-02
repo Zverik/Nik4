@@ -21,7 +21,7 @@ try:
 except ImportError:
     HAS_CAIRO = False
 
-VERSION = '1.7'
+VERSION = '1.8'
 TILE_BUFFER = 128
 IM_MONTAGE = 'montage'
 EPSG_4326 = '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'

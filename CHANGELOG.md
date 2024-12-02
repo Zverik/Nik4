@@ -1,5 +1,9 @@
 # Nik4 Change History
 
+## 1.8, 1.12.2024
+
+* Fixed font loading. [#46](https://github.com/Zverik/Nik4/pull/46) — thanks @Luflosi.
+
 ## 1.7, 27.03.2021
 
 * Choose any projection with `--projection`. [#29](https://github.com/Zverik/Nik4/pull/29) - thanks @Nakaner.

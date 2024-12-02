@@ -1,3 +1,5 @@
+.venv/
+Nik4.egg-info/
 dist/
 build/
 README.txt
